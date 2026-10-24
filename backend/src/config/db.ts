@@ -11,12 +11,10 @@ export async function connectDatabase(): Promise<void> {
   try {
     await mongoose.connect(mongoUri)
     console.log('MongoDB connected successfully.')
-  } catch (_error) {
-    console.error(
-      'MongoDB connection failed. Check the MONGODB_URI value and Atlas network access settings.'
-    )
-    throw new Error('MongoDB connection failed')
-  }
+  } catch (error) {
+  console.error("Actual MongoDB error:", error);
+  throw error;
+}
 }
 
 export function getDatabaseStatus(): string {
