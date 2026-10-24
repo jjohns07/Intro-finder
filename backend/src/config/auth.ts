@@ -1,4 +1,4 @@
-import jwt, { type JwtPayload } from 'jsonwebtoken'
+import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken'
 
 export function getJwtConfig(): { secret: string; expiresIn: string } {
   const secret = process.env.JWT_SECRET
@@ -23,8 +23,8 @@ export function generateToken(userId: string, email: string): string {
   const { secret, expiresIn } = getJwtConfig()
 
   return jwt.sign({ sub: userId, email }, secret, {
-    expiresIn,
-  })
+  expiresIn: expiresIn as SignOptions['expiresIn'],
+})
 }
 
 export function verifyToken(token: string): JwtPayload & { sub: string; email: string } {
