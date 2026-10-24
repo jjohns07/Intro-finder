@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 
 type AuthMode = 'login' | 'register'
+type ThemeMode = 'light' | 'dark'
 
 type User = {
   id: string
@@ -25,6 +26,7 @@ type StatusState = {
 
 const API_BASE_URL = 'https://intro-finder-api.onrender.com/api/auth'
 const TOKEN_STORAGE_KEY = 'introfinder_token'
+const THEME_STORAGE_KEY = 'intro-finder-theme'
 
 const getStoredToken = (): string | null => sessionStorage.getItem(TOKEN_STORAGE_KEY)
 
@@ -63,12 +65,262 @@ const initialFormState: AuthFormState = {
   confirmPassword: '',
 }
 
-function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
+function ThemeToggle({ theme, onToggle }: { theme: ThemeMode; onToggle: () => void }) {
+  const isDark = theme === 'dark'
+
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={onToggle}
+      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+    >
+      <span className="theme-toggle-track" aria-hidden="true">
+        <span className="theme-toggle-thumb">{isDark ? '☾' : '☀'}</span>
+      </span>
+      <span className="theme-toggle-label">{isDark ? 'Dark' : 'Light'}</span>
+    </button>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg className="google-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.22 3.61l6.87-6.87C35.71 2.57 30.43 0 24 0 14.64 0 6.5 5.38 2.54 13.22l8.05 6.25C12.5 14.56 17.72 9.5 24 9.5Z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.56 24.55c0-1.59-.14-3.12-.4-4.55H24v8.6h12.86c-.55 2.94-2.22 5.43-4.72 7.12l7.64 5.92C43.83 36.91 46.56 31.35 46.56 24.55Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M32.14 39.7c-2.59 1.73-5.89 2.75-8.14 2.75-6.29 0-11.62-4.19-13.51-9.81l-8.12 6.29C6.82 43.3 14.72 48 24 48c7.32 0 13.46-2.41 17.96-6.53l-9.82-1.77Z"
+      />
+      <path
+        fill="#34A853"
+        d="M10.49 32.64A14.15 14.15 0 0 1 9.5 24c0-1.57.27-3.08.75-4.52L2.54 13.22A23.52 23.52 0 0 0 0 24c0 3.8.91 7.4 2.54 10.57l7.95-6.29Z"
+      />
+    </svg>
+  )
+}
+
+function LogoMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`brand-mark ${compact ? 'compact' : ''}`} aria-label="Intro Finder logo">
+      <svg viewBox="0 0 52 52" role="img" aria-hidden="true" focusable="false">
+        <circle cx="19" cy="25" r="8.5" fill="none" stroke="currentColor" strokeWidth="2.8" />
+        <path d="M27.4 22.9c3.5 0 6.6 2.8 7 6.3l1.7 8.1c.2 1.6-1 3-2.6 3H18.5c-1.6 0-2.8-1.4-2.6-3l1.7-8.1c.4-3.5 3.5-6.3 7-6.3Z" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
+        <path d="M30.5 12.5a6 6 0 0 1 8.2 8.3M38.5 15l-8 8.3" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M41.5 19.5 46.5 15" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+      </svg>
+    </div>
+  )
+}
+
+function TypewriterHeadline({
+  text,
+  as: Component = 'h1',
+  className = '',
+  once = true,
+}: {
+  text: string
+  as?: 'h1' | 'h2'
+  className?: string
+  once?: boolean
+}) {
+  const containerRef = useRef<HTMLElement | null>(null)
+  const hasStartedRef = useRef(false)
+  const [visible, setVisible] = useState(false)
+  const [displayedText, setDisplayedText] = useState('')
+
+  useEffect(() => {
+    const element = containerRef.current
+
+    if (!element || !once) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry?.isIntersecting) {
+          setVisible(true)
+          if (!hasStartedRef.current) {
+            hasStartedRef.current = true
+          }
+        }
+      },
+      { threshold: 0.3 },
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [once])
+
+  useEffect(() => {
+    if (!visible) {
+      return
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (prefersReducedMotion) {
+      setDisplayedText(text)
+      return
+    }
+
+    let index = 0
+    const timer = window.setInterval(() => {
+      index += 1
+      setDisplayedText(text.slice(0, index))
+
+      if (index >= text.length) {
+        window.clearInterval(timer)
+      }
+    }, 42)
+
+    return () => window.clearInterval(timer)
+  }, [text, visible])
+
+  const isComplete = displayedText.length >= text.length
+
+  return (
+    <Component ref={containerRef} className={className} aria-label={text}>
+      {displayedText}
+      {!isComplete && visible && <span className="typewriter-caret" aria-hidden="true" />}
+    </Component>
+  )
+}
+
+function AnimatedStat({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
+  const [displayValue, setDisplayValue] = useState(0)
+  const statRef = useRef<HTMLDivElement | null>(null)
+  const hasAnimatedRef = useRef(false)
+
+  useEffect(() => {
+    const element = statRef.current
+
+    if (!element) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+
+        if (!entry?.isIntersecting || hasAnimatedRef.current) {
+          return
+        }
+
+        hasAnimatedRef.current = true
+        const startTime = performance.now()
+        const duration = 1200
+
+        const update = (time: number) => {
+          const progress = Math.min((time - startTime) / duration, 1)
+          const eased = 1 - (1 - progress) ** 3
+          setDisplayValue(Math.round(value * eased))
+
+          if (progress < 1) {
+            requestAnimationFrame(update)
+          }
+        }
+
+        requestAnimationFrame(update)
+      },
+      { threshold: 0.35 },
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [value])
+
+  return (
+    <div className="stat-box" ref={statRef}>
+      <span>
+        {displayValue}
+        {suffix}
+      </span>
+      <small>{label}</small>
+    </div>
+  )
+}
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  name,
+  show,
+  onToggle,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder: string
+  autoComplete: string
+  name: string
+  show: boolean
+  onToggle: () => void
+}) {
+  return (
+    <label className="field" htmlFor={id}>
+      <span>{label}</span>
+      <div className="password-input-wrap">
+        <input
+          id={id}
+          type={show ? 'text' : 'password'}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          onClick={onToggle}
+          aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          aria-pressed={show}
+        >
+          {show ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M2.5 12S6.1 5.5 12 5.5 21.5 12 21.5 12 17.9 18.5 12 18.5 2.5 12 2.5 12Zm9.5 3.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 3.5 20.5 21l-1 1-3.32-3.32A12.8 12.8 0 0 1 12 18.5C6.1 18.5 2.5 12 2.5 12a13.1 13.1 0 0 1 5.2-5.8L4 4.5 3 3.5Zm9 2.42A9.6 9.6 0 0 1 17.5 12c-.5.9-1.2 1.7-2 2.4L14.4 13a3.5 3.5 0 0 1-5.2-4.1L8.8 8.3c.8-.4 1.7-.6 2.7-.6Zm-1.3 6.35L13.3 14a2.5 2.5 0 0 1-3.1-3.1Zm6.5-5.1L16.9 8a9.7 9.7 0 0 1 2.8 4.1c-.8 1.2-1.9 2.3-3.2 3.1l-1.2-1.2a8.4 8.4 0 0 0 2.3-2.5 8.7 8.7 0 0 0-2.9-3.3Z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </label>
+  )
+}
+
+function AuthScreen({
+  onAuthenticated,
+  theme,
+  onToggleTheme,
+}: {
+  onAuthenticated: (user: User) => void
+  theme: ThemeMode
+  onToggleTheme: () => void
+}) {
   const navigate = useNavigate()
   const [mode, setMode] = useState<AuthMode>('login')
   const [formData, setFormData] = useState<AuthFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState<StatusState | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const isLogin = mode === 'login'
 
@@ -80,6 +332,8 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
   const handleModeChange = (nextMode: AuthMode) => {
     setMode(nextMode)
     setStatus(null)
+    setShowPassword(false)
+    setShowConfirmPassword(false)
     setFormData(initialFormState)
   }
 
@@ -160,17 +414,19 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
     <div className="auth-shell">
       <div className="auth-card">
         <aside className="auth-brand-panel" aria-label="Intro Finder overview">
-          <div className="brand-header">
-            <div className="brand-mark">IF</div>
-            <div className="brand-copy">
-              <strong>Intro Finder</strong>
-              <span>Warm intros, smarter</span>
+          <div className="brand-header-row">
+            <div className="brand-header">
+              <LogoMark />
+              <div className="brand-copy">
+                <strong>Intro Finder</strong>
+                <span>Warm intros, smarter</span>
+              </div>
             </div>
           </div>
 
           <div className="eyebrow">Private network</div>
-          <h1>Find warm paths to the right people.</h1>
-          <p>
+          <TypewriterHeadline as="h1" className="brand-headline" text="Find warm paths to the right people" />
+          <p className="brand-description">
             Use your professional network to unlock thoughtful introductions and move faster
             with the right context.
           </p>
@@ -182,37 +438,34 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
           </ul>
 
           <div className="brand-stats">
-            <div className="stat-box">
-              <span>24</span>
-              <small>warm leads</small>
-            </div>
-            <div className="stat-box">
-              <span>92%</span>
-              <small>response rate</small>
-            </div>
+            <AnimatedStat value={24} label="warm leads" />
+            <AnimatedStat value={92} label="response rate" suffix="%" />
           </div>
         </aside>
 
         <main className="auth-form-panel">
-          <div className="auth-mode-switch" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isLogin}
-              className={isLogin ? 'active' : ''}
-              onClick={() => handleModeChange('login')}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!isLogin}
-              className={!isLogin ? 'active' : ''}
-              onClick={() => handleModeChange('register')}
-            >
-              Register
-            </button>
+          <div className="auth-toolbar">
+            <div className="auth-mode-switch" role="tablist" aria-label="Authentication mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isLogin}
+                className={isLogin ? 'active' : ''}
+                onClick={() => handleModeChange('login')}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isLogin}
+                className={!isLogin ? 'active' : ''}
+                onClick={() => handleModeChange('register')}
+              >
+                Register
+              </button>
+            </div>
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
 
           <div className="form-heading">
@@ -226,7 +479,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
 
           <form className="auth-form" onSubmit={handleSubmit}>
             {!isLogin && (
-              <label>
+              <label className="field">
                 <span>Full name</span>
                 <input
                   type="text"
@@ -234,11 +487,12 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Alex Lee"
+                  autoComplete="name"
                 />
               </label>
             )}
 
-            <label>
+            <label className="field">
               <span>Email address</span>
               <input
                 type="email"
@@ -246,11 +500,12 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
+                autoComplete="email"
               />
             </label>
 
             {!isLogin && (
-              <label>
+              <label className="field">
                 <span>Company</span>
                 <input
                   type="text"
@@ -258,32 +513,35 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
                   value={formData.company}
                   onChange={handleChange}
                   placeholder="Northstar Capital"
+                  autoComplete="organization"
                 />
               </label>
             )}
 
-            <label>
-              <span>Password</span>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-              />
-            </label>
+            <PasswordField
+              id="password"
+              label="Password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              name="password"
+              show={showPassword}
+              onToggle={() => setShowPassword((current) => !current)}
+            />
 
             {!isLogin && (
-              <label>
-                <span>Confirm password</span>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Repeat your password"
-                />
-              </label>
+              <PasswordField
+                id="confirmPassword"
+                label="Confirm password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Repeat your password"
+                autoComplete="new-password"
+                name="confirmPassword"
+                show={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((current) => !current)}
+              />
             )}
 
             {isLogin && (
@@ -313,8 +571,9 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (user: User) => void
             <span>or continue with</span>
           </div>
 
-          <button type="button" className="secondary-button">
-            Continue with Google
+          <button type="button" className="secondary-button google-button">
+            <GoogleLogo />
+            <span>Continue with Google</span>
           </button>
 
           <p className="auth-switch">
@@ -337,12 +596,20 @@ function ProtectedRoute({ user, children }: { user: User | null; children: React
   return <>{children}</>
 }
 
-function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void }) {
+function DashboardScreen({
+  user,
+  onLogout,
+  theme,
+  onToggleTheme,
+}: {
+  user: User
+  onLogout: () => void
+  theme: ThemeMode
+  onToggleTheme: () => void
+}) {
   const navigate = useNavigate()
   const [companyName, setCompanyName] = useState('')
-  const [searchMessage, setSearchMessage] = useState<{ type: 'error' | 'info'; text: string } | null>(
-    null,
-  )
+  const [searchMessage, setSearchMessage] = useState<{ type: 'error' | 'info'; text: string } | null>(null)
 
   const handleLogout = () => {
     clearStoredToken()
@@ -387,7 +654,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar" aria-label="Main navigation">
           <div className="sidebar-brand">
-            <div className="brand-mark">IF</div>
+            <LogoMark compact />
             <div className="brand-copy">
               <strong>Intro Finder</strong>
             </div>
@@ -415,6 +682,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
             </div>
 
             <div className="user-actions">
+              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
               <div className="user-profile" aria-label="Current user profile">
                 <div className="user-avatar">{user.name.charAt(0).toUpperCase()}</div>
                 <div className="user-meta">
@@ -432,7 +700,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
           <main className="dashboard-main">
             <section className="dashboard-hero" aria-labelledby="dashboard-heading">
               <span className="eyebrow eyebrow-light">Private network</span>
-              <h2 id="dashboard-heading">Find your way to the right people.</h2>
+              <TypewriterHeadline as="h2" className="dashboard-headline" text="Find warm paths to the right people" />
               <p>
                 Discover potential introduction paths to company founders through your professional
                 connections, uncover trusted contacts, and move your outreach forward with greater
@@ -573,6 +841,25 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') {
+      return 'light'
+    }
+
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      return storedTheme
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     const token = getStoredToken()
@@ -602,6 +889,10 @@ function App() {
       })
   }, [])
 
+  const handleThemeToggle = () => {
+    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
+  }
+
   if (!authReady) {
     return (
       <div className="auth-shell">
@@ -618,13 +909,24 @@ function App() {
         <Route path="/" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
         <Route
           path="/login"
-          element={currentUser ? <Navigate to="/dashboard" replace /> : <AuthScreen onAuthenticated={setCurrentUser} />}
+          element={
+            currentUser ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <AuthScreen onAuthenticated={setCurrentUser} theme={theme} onToggleTheme={handleThemeToggle} />
+            )
+          }
         />
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute user={currentUser}>
-              <DashboardScreen user={currentUser!} onLogout={() => setCurrentUser(null)} />
+              <DashboardScreen
+                user={currentUser!}
+                onLogout={() => setCurrentUser(null)}
+                theme={theme}
+                onToggleTheme={handleThemeToggle}
+              />
             </ProtectedRoute>
           }
         />
