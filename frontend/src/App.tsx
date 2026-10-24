@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate,   Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 
 type AuthMode = 'login' | 'register'
@@ -38,7 +38,7 @@ const clearStoredToken = (): void => {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
-const getAuthHeaders = (tokenOverride?: string | null): HeadersInit => {
+const getAuthHeaders =   (tokenOverride?: string | null): HeadersInit => {
   const token = tokenOverride ?? getStoredToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
