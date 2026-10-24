@@ -131,7 +131,7 @@ function TypewriterHeadline({
   className?: string
   once?: boolean
 }) {
-  const containerRef = useRef<HTMLElement | null>(null)
+  const containerRef = useRef<HTMLHeadingElement | null>(null)
   const hasStartedRef = useRef(false)
   const [visible, setVisible] = useState(false)
   const [displayedText, setDisplayedText] = useState('')
