@@ -23,7 +23,7 @@ type StatusState = {
   text: string
 }
 
-const API_BASE_URL = 'https://intro-finder-api.onrender.com'
+const API_BASE_URL = 'https://intro-finder-api.onrender.com/api/auth'
 const TOKEN_STORAGE_KEY = 'introfinder_token'
 
 const getStoredToken = (): string | null => sessionStorage.getItem(TOKEN_STORAGE_KEY)
