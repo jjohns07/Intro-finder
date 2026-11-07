@@ -1,0 +1,156 @@
+/* Motion is progressive enhancement: resting styles always show final content.
+   No persistent will-change, scroll handlers, or invisible pre-reveal states. */
+:root {
+  --motion-reveal: 520ms;
+  --motion-detail: 360ms;
+  --motion-overlay: 140ms;
+  --ease-reveal: cubic-bezier(.16, 1, .3, 1);
+}
+.motion-route { min-height: 100vh; }
+.motion-word { display: inline-block; color: inherit !important; }
+[data-motion-text='words'] { animation: none !important; }
+.presentation-in-view [data-motion-text='words'] .motion-word,
+[data-motion-text='words'].presentation-in-view .motion-word {
+  animation: motion-word-in var(--motion-reveal) var(--ease-reveal) var(--word-delay, 0ms) backwards;
+}
+.presentation-in-view :is(h1, h2):not([data-motion-text='words']) {
+  animation: motion-heading-in 460ms var(--ease-reveal) backwards;
+}
+.presentation-in-view .presentation-eyebrow {
+  animation: motion-label-in 380ms ease backwards;
+}
+.presentation-in-view :is(.presentation-overview-copy > p, .presentation-explore-copy > p:not(.presentation-eyebrow), .presentation-paths-copy > p:not(.presentation-eyebrow), .network-section-copy > p:not(.presentation-eyebrow), .presentation-momentum-heading > p, .presentation-activity-heading > p, .presentation-discovery > p:not(.presentation-eyebrow), .settings-section-copy > p:last-child) {
+  animation: motion-copy-in 440ms ease 100ms backwards;
+}
+/* Page heroes use text choreography instead of animating the entire heading. */
+:is(.account-hero, .discovery-hero)[data-reveal] :is(h1, p),
+.discovery-hero[data-reveal] .discovery-artwork,
+.discovery-hero[data-reveal] .discovery-art-lines path,
+:is(.history-workspace, .discovery-search, .discovery-start)[data-reveal] { animation: none; }
+:is(.account-hero, .discovery-hero).presentation-in-view p:not(.presentation-eyebrow) {
+  animation: motion-copy-in 440ms ease 140ms backwards;
+}
+:is(.account-hero, .discovery-hero).presentation-in-view .presentation-eyebrow {
+  animation: motion-label-in 360ms ease backwards;
+}
+.discovery-hero.presentation-in-view .discovery-artwork { animation: motion-decoration-in 700ms var(--ease-reveal) backwards; }
+.discovery-hero.presentation-in-view .discovery-art-lines path { stroke-dasharray: 1; animation: discovery-line-draw 760ms ease 100ms backwards; }
+
+/* Different panel treatments establish rhythm while keeping movement small. */
+.presentation-overview.presentation-in-view { animation: motion-surface-in 500ms ease backwards; }
+.presentation-explore.presentation-in-view .presentation-search-panel { animation: motion-panel-in 500ms var(--ease-reveal) 80ms backwards; }
+.presentation-activity.presentation-in-view { animation: motion-surface-in 480ms ease backwards; }
+.presentation-your-network.presentation-in-view .network-platform-panel { animation: motion-panel-in 520ms var(--ease-reveal) 100ms backwards; }
+.presentation-paths.presentation-in-view .presentation-path-figure { animation: motion-surface-in 480ms ease 80ms backwards; }
+.settings-section.presentation-in-view > :last-child { animation: motion-copy-in 440ms ease 100ms backwards; }
+.settings-section#appearance.presentation-in-view > :last-child { animation: motion-surface-in 500ms ease backwards; }
+.settings-section#security.presentation-in-view > :last-child { animation: motion-panel-in 480ms var(--ease-reveal) backwards; }
+.history-workspace.presentation-in-view { animation: motion-surface-in 440ms ease backwards; }
+.discovery-search.presentation-in-view { animation: motion-panel-in 480ms var(--ease-reveal) 60ms backwards; }
+.discovery-start.presentation-in-view { animation: motion-copy-in 460ms ease backwards; }
+.discovery-start.presentation-in-view .discovery-guide li { animation: motion-copy-in 400ms ease 80ms backwards; }
+.discovery-start.presentation-in-view .discovery-guide li:nth-child(2) { animation-delay: 140ms; }
+.discovery-start.presentation-in-view .discovery-guide li:nth-child(3) { animation-delay: 200ms; }
+.discovery-company.presentation-in-view { animation: motion-panel-in 500ms var(--ease-reveal) backwards; }
+.presentation-discovery.presentation-in-view .discovery-network-art { animation: motion-decoration-in 800ms var(--ease-reveal) backwards; }
+.presentation-overview.presentation-in-view .presentation-network-art { animation: motion-decoration-in 700ms ease 120ms backwards; }
+.presentation-overview.presentation-in-view .network-nodes { animation: motion-copy-in 500ms ease 180ms backwards; }
+
+/* Rows own their viewport reveal, including asynchronously inserted records. */
+.history-record[data-reveal], .recent-search-feed > li[data-reveal] { animation: none; }
+.history-record.presentation-in-view { animation: motion-row-in 400ms var(--ease-reveal) var(--record-delay, 0ms) backwards; }
+.recent-search-feed > li.presentation-in-view { animation: motion-row-in 400ms var(--ease-reveal) var(--item-delay, 0ms) backwards; }
+
+/* Reserve the final number's inline space throughout a genuine count-up. */
+.motion-metric { display: inline-grid; font-variant-numeric: tabular-nums; }
+.motion-metric > span { grid-area: 1 / 1; }
+.motion-metric-size { visibility: hidden; }
+.presentation-in-view .presentation-statistics > div { animation-duration: 440ms; }
+
+/* Clip reveals retain both solid lines and deliberately dashed series at every
+   responsive SVG size. Normalized dashes plus non-scaling strokes can fragment. */
+.presentation-momentum :is(.momentum-connections, .momentum-opportunities, .momentum-area, .momentum-point, .momentum-bar) { animation: none; }
+.presentation-momentum .momentum-connections { stroke-dasharray: none; }
+.presentation-chart-panel.presentation-in-view { animation: motion-surface-in 440ms ease backwards; }
+.presentation-chart-panel.presentation-in-view .momentum-connections { animation: motion-line-reveal 720ms var(--ease-reveal) 80ms backwards; }
+.presentation-chart-panel.presentation-in-view .momentum-opportunities { animation: motion-line-reveal 760ms var(--ease-reveal) 150ms backwards; }
+.presentation-chart-panel.presentation-in-view :is(.momentum-area, .momentum-point) { animation: motion-surface-in 480ms ease 240ms backwards; }
+.presentation-chart-panel.presentation-in-view .momentum-bar { animation: bar-grow-in 560ms var(--ease-reveal) backwards; }
+.presentation-in-view .distribution-track > span { animation: connection-horizontal-in 600ms var(--ease-reveal) 100ms backwards; }
+.chart-tooltip.motion-presence { transform-origin: top center; animation: motion-tooltip-in 140ms ease backwards; transition: left 100ms ease; }
+.chart-tooltip.motion-presence[data-exiting] { animation: motion-overlay-out 120ms ease; }
+
+/* One pass through a path: person, relationship line, connecting person, target.
+   Only genuine active integrations receive an active-line treatment. */
+.opportunity-panel[data-reveal], .opportunity-panel[data-reveal] .opportunity-nodes li::before { animation: none; }
+.opportunity-panel.presentation-in-view { animation: motion-surface-in 460ms ease backwards; }
+.opportunity-panel.presentation-in-view .opportunity-nodes li > :is(span, strong, small) { animation: motion-node-in 420ms var(--ease-reveal) var(--path-delay, 0ms) backwards; }
+.opportunity-panel.presentation-in-view .opportunity-nodes li + li::before { animation: connection-horizontal-in 380ms ease var(--path-delay, 0ms) backwards; }
+.discovery-path.presentation-in-view { animation: motion-surface-in 440ms ease var(--path-delay, 0ms) backwards; }
+.discovery-path.presentation-in-view .discovery-person { animation: motion-node-in 440ms var(--ease-reveal) calc(var(--node-index) * 130ms) backwards; }
+.discovery-path.presentation-in-view .discovery-edge svg { animation-duration: 400ms; animation-delay: calc(80ms + var(--node-index) * 130ms); }
+.discovery-path.presentation-in-view .discovery-edge::before { animation-duration: 400ms; animation-delay: calc(80ms + var(--node-index) * 130ms); }
+.discovery-path.presentation-in-view .discovery-person[data-position='bridge'] .discovery-portrait { --node-glow: var(--color-analytics-soft); animation: motion-node-glow 640ms ease calc(180ms + var(--node-index) * 130ms); }
+.discovery-path.presentation-in-view .discovery-person[data-position='target'] .discovery-portrait { --node-glow: var(--color-primary-soft); animation: motion-node-glow 640ms ease calc(180ms + var(--node-index) * 130ms); }
+.opportunity-panel.presentation-in-view [data-position='bridge'] .opportunity-node { --node-glow: var(--color-analytics-soft); animation: motion-node-in 420ms var(--ease-reveal) var(--path-delay, 0ms) backwards, motion-node-glow 640ms ease calc(180ms + var(--path-delay, 0ms)); }
+.opportunity-panel.presentation-in-view [data-position='target'] .opportunity-node { --node-glow: var(--color-primary-soft); animation: motion-node-in 420ms var(--ease-reveal) var(--path-delay, 0ms) backwards, motion-node-glow 640ms ease calc(180ms + var(--path-delay, 0ms)); }
+.presentation-in-view [data-connected='true'] .platform-map-circle { animation: motion-platform-in 620ms ease 220ms backwards; }
+.presentation-in-view .path-node-you .path-node-circle { animation: motion-node-in 440ms ease backwards; }
+.presentation-in-view .path-node-bridge .path-node-circle { animation: motion-node-in 440ms ease 160ms backwards; }
+.presentation-in-view .path-node-target .path-node-circle { animation: motion-node-in 440ms ease 320ms backwards; }
+
+/* Menus/tooltips exit without keeping invisible content interactive. */
+.presentation-popover.motion-presence { transform-origin: top right; animation: motion-overlay-in 180ms var(--ease-reveal) backwards; }
+.motion-presence[data-exiting] { opacity: 0; pointer-events: none; animation: motion-overlay-out var(--motion-overlay) ease; }
+.presentation-popover.motion-presence[data-exiting] { animation: motion-overlay-out var(--motion-overlay) ease; }
+.motion-presence[data-exiting] * { animation: none !important; }
+.presentation-navigation.motion-presence:not([data-exiting]) a { animation: motion-copy-in 180ms ease backwards; }
+.presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(2) { animation-delay: 20ms; }
+.presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(3) { animation-delay: 40ms; }
+.presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(n+4) { animation-delay: 60ms; }
+.presentation-navigation a > span:last-child { transition: translate 160ms var(--ease-standard); }
+.auth-heading h1 { animation: motion-heading-in 480ms var(--ease-reveal) 100ms backwards; }
+.auth-spinner, .discovery-spinner { animation-duration: 720ms; }
+.discovery-state-card, .discovery-path-details, .history-empty, .auth-feedback { animation-duration: 240ms; }
+
+:is(.button, .primary-button, .secondary-button, .presentation-inline-action, .history-reopen, .presentation-profile-trigger, .presentation-menu-trigger) {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 180ms ease, translate 160ms var(--ease-standard), scale 100ms ease;
+}
+:is(.button, .primary-button, .secondary-button, .presentation-inline-action, .history-reopen, .presentation-profile-trigger, .presentation-menu-trigger):active:not(:disabled):not([aria-disabled='true']) { translate: 0 0; scale: .985; }
+:is(.opportunity-panel, .discovery-path, .theme-option) { transition: border-color 180ms ease, box-shadow 220ms ease, translate 220ms var(--ease-standard); }
+.chart-view-control button, .presentation-period-control button { transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease; }
+.history-select select { transition: border-color 160ms ease, box-shadow 160ms ease; }
+.history-select select:focus-visible { border-color: var(--color-gold); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+@media (hover: hover) {
+  :is(.button, .primary-button, .secondary-button):hover:not(:disabled):not([aria-disabled='true']) { translate: 0 -1px; }
+  :is(.opportunity-panel, .discovery-path):hover { translate: 0 -2px; box-shadow: var(--shadow-panel); }
+  .theme-option:hover { translate: 0 -1px; }
+  .presentation-navigation a:hover > span:last-child { translate: 2px -2px; }
+}
+@media (max-width: 760px) {
+  .opportunity-panel.presentation-in-view .opportunity-nodes li + li::before { animation-name: connection-vertical-in; }
+}
+
+@keyframes motion-word-in { from { opacity: 0; transform: translateY(.18em); clip-path: inset(0 0 100%); } to { opacity: 1; transform: translateY(0); clip-path: inset(0); } }
+@keyframes motion-heading-in { from { opacity: 0; transform: translateY(9px); clip-path: inset(0 0 90%); } to { opacity: 1; transform: translateY(0); clip-path: inset(0); } }
+@keyframes motion-label-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes motion-copy-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes motion-surface-in { from { opacity: .4; } to { opacity: 1; } }
+@keyframes motion-panel-in { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes motion-row-in { from { opacity: .3; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes motion-decoration-in { from { opacity: 0; transform: scale(.98); } to { transform: scale(1); } }
+@keyframes motion-line-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes motion-node-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes motion-node-glow { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 45% { box-shadow: 0 0 0 7px var(--node-glow); } }
+@keyframes motion-platform-in { from { stroke-opacity: .25; } to { stroke-opacity: 1; } }
+@keyframes motion-overlay-in { from { opacity: 0; transform: translateY(-4px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes motion-overlay-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-3px); } }
+@keyframes motion-tooltip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+/* A preference change finishes seen content and never replays it later. */
+[data-motion-static], [data-motion-static] *, [data-motion-static] *::before, [data-motion-static] *::after { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .motion-presence[data-exiting] { visibility: hidden; }
+  :is(.button, .primary-button, .secondary-button, .presentation-inline-action, .history-reopen, .presentation-profile-trigger, .presentation-menu-trigger, .opportunity-panel, .discovery-path, .theme-option) { translate: none !important; scale: none !important; }
+}

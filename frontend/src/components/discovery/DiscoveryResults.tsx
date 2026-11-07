@@ -29,13 +29,13 @@ function PathPanel({ path, people, connections, index }: {
   const edges = people.slice(0, -1).map((person, i) => connections.find(connection =>
     connection.fromPersonId === person.id && connection.toPersonId === people[i + 1].id))
   return (
-    <article className="discovery-path" data-reveal style={{ '--path-delay': `${Math.min(index, 4) * 70}ms` } as CSSProperties} aria-labelledby={`${detailsId}-heading`}>
+    <article className="discovery-path" data-reveal="path" style={{ '--path-delay': `${Math.min(index, 4) * 70}ms` } as CSSProperties} aria-labelledby={`${detailsId}-heading`}>
       <header className="discovery-path-heading">
         <div><p className="presentation-eyebrow">Path {String(index + 1).padStart(2, '0')}</p><h3 id={`${detailsId}-heading`}>A way to {target.name}</h3></div>
         <span className="discovery-depth">{people.length - 1} {people.length === 2 ? 'step' : 'steps'}</span>
       </header>
       <ol className="discovery-person-path" data-long={people.length > 4 || undefined} aria-label={`Introduction path to ${target.name}`}>
-        {people.map((person, i) => <li key={`${person.id}-${i}`} style={{ '--node-index': i } as CSSProperties}>
+        {people.map((person, i) => <li key={`${person.id}-${i}`} style={{ '--node-index': Math.min(i, 6) } as CSSProperties}>
           <div className="discovery-person" data-position={i === 0 ? 'start' : i === people.length - 1 ? 'target' : 'bridge'}>
             <span className="discovery-person-label">{person.isCurrentUser ? 'You' : i === people.length - 1 ? 'Target' : i === 0 ? 'Starting point' : 'Connection'}</span>
             <PersonPortrait person={person} />
@@ -107,7 +107,7 @@ export function DiscoveryResults({ result, onNewSearch }: { result: DiscoveryRes
         </div>
         {date && Number.isFinite(date.getTime()) && <p className="discovery-source-note">Result generated <time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date)}</time></p>}
       </article>
-      <div className="discovery-paths-heading"><div><p className="presentation-eyebrow">The people between you</p><h2>Your introduction paths<span>.</span></h2></div>{resolvedPaths.length > 0 && <p>{resolvedPaths.length} {resolvedPaths.length === 1 ? 'available path' : 'available paths'}<span>Connection depth follows the supplied path.</span></p>}</div>
+      <div className="discovery-paths-heading" data-reveal="editorial"><div><p className="presentation-eyebrow">The people between you</p><h2>Your introduction paths<span>.</span></h2></div>{resolvedPaths.length > 0 && <p>{resolvedPaths.length} {resolvedPaths.length === 1 ? 'available path' : 'available paths'}<span>Connection depth follows the supplied path.</span></p>}</div>
       {incompleteCount > 0 && <p className="discovery-result-warnings">{incompleteCount} {incompleteCount === 1 ? 'path is' : 'paths are'} missing complete person details. Only complete paths can be displayed.</p>}
       {resolvedPaths.length ? <div className="discovery-path-list">{resolvedPaths.map(({ path, people }, index) => <PathPanel key={path.id} path={path} people={people} connections={result.connections ?? []} index={index} />)}</div> : <div className="discovery-no-paths">
         <span className="discovery-state-symbol" aria-hidden="true">↗</span>

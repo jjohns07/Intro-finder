@@ -13,26 +13,31 @@ export function AnimatedMetric({ value }: { value: number }) {
       cancelAnimationFrame(frame)
       element.textContent = formatted
     }
-    if (motion.matches || value === 0) { finish(); return }
+    if (motion.matches || value <= 0 || !Number.isFinite(value) || typeof IntersectionObserver !== 'function') { finish(); return }
 
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return
-      observer.disconnect()
-      const start = performance.now()
-      const tick = (now: number) => {
-        const progress = Math.min((now - start) / 850, 1)
-        element.textContent = Math.round(value * (1 - (1 - progress) ** 3)).toLocaleString()
-        if (progress < 1) frame = requestAnimationFrame(tick)
-        else finish()
-      }
-      element.textContent = '0'
-      frame = requestAnimationFrame(tick)
-    }, { threshold: 0.6 })
-    observer.observe(element)
+    let observer: IntersectionObserver
+    try {
+      observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        observer.disconnect()
+        const start = performance.now()
+        const tick = (now: number) => {
+          const progress = Math.min((now - start) / 720, 1)
+          element.textContent = Math.round(value * (1 - (1 - progress) ** 3)).toLocaleString()
+          if (progress < 1) frame = requestAnimationFrame(tick)
+          else finish()
+        }
+        element.textContent = '0'
+        frame = requestAnimationFrame(tick)
+      }, { threshold: 0.6 })
+      observer.observe(element)
+    } catch { finish(); return }
     const onMotionChange = () => { if (motion.matches) { observer.disconnect(); finish() } }
     motion.addEventListener('change', onMotionChange)
-    return () => { observer.disconnect(); cancelAnimationFrame(frame); motion.removeEventListener('change', onMotionChange) }
+    const onVisibilityChange = () => { if (document.hidden) { observer.disconnect(); finish() } }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); motion.removeEventListener('change', onMotionChange); document.removeEventListener('visibilitychange', onVisibilityChange) }
   }, [value, formatted])
 
-  return <span aria-label={formatted}><span aria-hidden="true" ref={valueRef}>{formatted}</span></span>
+  return <span className="motion-metric" aria-label={formatted}><span className="motion-metric-size" aria-hidden="true">{formatted}</span><span aria-hidden="true" ref={valueRef}>{formatted}</span></span>
 }

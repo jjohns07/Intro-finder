@@ -175,3 +175,39 @@ without claiming persistence succeeded. Authentication's photograph keeps its
 dark overlay and readable light text in either theme; the form follows the
 selected palette. `--color-on-analytics` provides readable text inside filled
 teal nodes in both palettes. All new motion respects reduced-motion preferences.
+
+## Application motion
+
+`src/styles/motion.css` refines the existing compositions without changing their
+layout. Shared motion components live in `src/components/motion`: `WordReveal`
+keeps normal text/spacing and accent inheritance, `PageTransition` fades incoming
+routes for 180ms, and `MotionPresence` gives menus/tooltips a short visual exit.
+Closing overlays are immediately inert and hidden from assistive technology;
+navigation never waits for an exit or keeps an obsolete authenticated page alive.
+Hash navigation keeps its existing scroll/focus behavior and does not replay the
+page transition. The existing profile disclosure shares the menu motion.
+
+`useSectionReveal` observes each element once, removes it from observation after
+entry, and incrementally discovers added result panels/history rows using a
+scoped MutationObserver. It does not attach scroll handlers or rescan on counter
+text changes. Revealed classes survive ordinary rerenders and back-scrolling.
+Missing/failed Intersection Observer falls back to visible static content.
+Reduced motion finishes current effects; content seen under that preference is
+marked static and does not unexpectedly replay when motion is re-enabled.
+
+Selected editorial headings reveal by word, other headings use short upward
+masks, labels enter horizontally, and paragraphs follow with a smaller fade.
+Panel treatments vary between opacity, slight upward movement and row entrances.
+Chart panels own their viewport timing. Line-chart reveals use clipping rather
+than changing dash patterns, preserving true gaps and deliberately dashed series
+at responsive SVG sizes. Bars grow to their supplied values. Genuine counters
+reserve final-value width and settle after 720ms; missing values stay unavailable.
+Ordered path nodes and lines reveal in sequence with a single, subtle highlight
+on the connecting person/target. Decorative effects never loop. Only real loading
+indicators animate continuously while work is pending.
+
+Button hover/press, navigation arrows, inputs, cards, and tooltip position changes
+use restrained transitions. No animation library was added. Resting CSS always
+shows the complete content, including if Web Animations is unavailable. There are
+currently no pie charts, modal dialogs, or standalone profile route; this pass
+animates existing components rather than adding new layouts or data displays.

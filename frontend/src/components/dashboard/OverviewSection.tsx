@@ -1,5 +1,6 @@
 import { AnimatedMetric } from './AnimatedMetric'
 import { Link } from 'react-router-dom'
+import { WordReveal } from '../motion/WordReveal'
 
 export type OverviewMetrics = {
   totalConnections: number | null
@@ -26,14 +27,14 @@ export function OverviewSection({ metrics = emptyMetrics }: { metrics?: Overview
   const hasUnavailableMetrics = statistics.some(({ value }) => value == null)
 
   return (
-    <section className="presentation-overview" id="overview" aria-labelledby="overview-heading" tabIndex={-1} data-reveal>
+    <section className="presentation-overview" id="overview" aria-labelledby="overview-heading" tabIndex={-1} data-reveal="overview">
       <div className="presentation-section-topline">
         <p className="presentation-eyebrow"><span className="presentation-status-dot" /> Your network, at a glance</p>
         <span className="presentation-section-number" aria-hidden="true">01 / Overview</span>
       </div>
       <div className="presentation-overview-grid">
         <div className="presentation-overview-copy">
-          <h1 id="overview-heading">Your Network.<br /><span>New Possibilities.</span></h1>
+          <h1 id="overview-heading" data-motion-text="words"><WordReveal text="Your Network." /><br /><span><WordReveal text="New Possibilities." start={2} /></span></h1>
           <p>Discover meaningful connections and find your way to the people who matter.</p>
           <Link className="button button--primary presentation-primary-action" to="/find-introductions">
             Explore introductions

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useThemePreference, type ThemePreference } from '../../theme/useThemePreference'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { AccountPageLayout, type AccountPageProps } from './AccountPageLayout'
+import { WordReveal } from '../motion/WordReveal'
 
 const themes: { value: ThemePreference; label: string; description: string }[] = [
   { value: 'dark', label: 'After hours', description: 'Dark · Our signature charcoal palette' },
@@ -18,7 +19,7 @@ export function SettingsPage(props: AccountPageProps) {
   const initials = user.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
   return <AccountPageLayout {...props} title="Settings">
     <main className="account-main settings-main" id="account-page-content" tabIndex={-1} ref={revealRef}>
-      <header className="account-hero"><p className="presentation-eyebrow"><span /> A space that feels like you</p><h1>Your account.<br /><span>Your preferences.</span></h1><p>The essentials, thoughtfully arranged. Make Intro Finder feel at home.</p></header>
+      <header className="account-hero" data-reveal="hero"><p className="presentation-eyebrow"><span /> A space that feels like you</p><h1 data-motion-text="words"><WordReveal text="Your account." /><br /><span><WordReveal text="Your preferences." start={2} /></span></h1><p>The essentials, thoughtfully arranged. Make Intro Finder feel at home.</p></header>
       <nav className="settings-section-links" aria-label="Settings sections"><a href="#account">Account</a><a href="#appearance">Appearance</a><a href="#platforms">Connected platforms</a><a href="#security">Security</a></nav>
 
       <section className="settings-section" id="account" tabIndex={-1} aria-labelledby="account-heading" data-reveal>

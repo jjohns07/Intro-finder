@@ -6,6 +6,8 @@ import './styles/dashboard.css'
 import './styles/dashboard-refinements.css'
 import './styles/discovery.css'
 import './styles/account.css'
+import './styles/motion.css'
+import { PageTransition } from './components/motion/PageTransition'
 import { SearchHistoryPage } from './components/account/SearchHistoryPage'
 import { SettingsPage } from './components/account/SettingsPage'
 import { FindIntroductionsPage } from './components/discovery/FindIntroductionsPage'
@@ -465,6 +467,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <PageTransition>
       <Routes>
         <Route path="/" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
         <Route
@@ -500,6 +503,7 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute user={currentUser}><SettingsPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
       </Routes>
+      </PageTransition>
     </BrowserRouter>
   )
 }

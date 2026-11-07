@@ -1,5 +1,6 @@
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { ActivityData, ActivityPeriod, ActivityPoint } from './data'
+import { MotionPresence } from '../motion/MotionPresence'
 
 type ChartView = 'activity' | 'searches'
 // Explicit chart examples; never used as account metrics, history, or paths.
@@ -10,6 +11,17 @@ const examples: Record<ActivityPeriod, readonly ActivityPoint[]> = {
 const isCount = (value: number | null): value is number => value != null && Number.isFinite(value) && value >= 0
 const formatCount = (value: number | null) => isCount(value) ? value.toLocaleString() : 'Not available'
 const lineX = (index: number, length: number) => length === 1 ? 500 : index * 1000 / (length - 1)
+
+type TooltipSnapshot = { point: ActivityPoint; view: ChartView; example: boolean; x: number }
+function ActivityTooltip({ snapshot, id }: { snapshot: TooltipSnapshot | null; id: string }) {
+  const [last, setLast] = useState(snapshot)
+  // Keep the last content during a short, inert exit; compare fields rather
+  // than object identity so pointer events cannot cause a render loop.
+  if (snapshot && (!last || snapshot.point !== last.point || snapshot.view !== last.view || snapshot.example !== last.example || snapshot.x !== last.x)) setLast(snapshot)
+  const content = snapshot ?? last
+  if (!content) return null
+  return <MotionPresence open={!!snapshot} id={id} role="tooltip" className="chart-tooltip" style={{ left: `clamp(0px, ${content.x / 10}% - 5.5rem, max(0px, 100% - 11rem))` }}><strong>{content.point.label}</strong>{content.example && <small>Example data</small>}<dl>{content.view === 'activity' ? <><div><dt>Connections</dt><dd>{formatCount(content.point.connections)}</dd></div><div><dt>Opportunities</dt><dd>{formatCount(content.point.opportunities)}</dd></div></> : <div><dt>Searches</dt><dd>{formatCount(content.point.searches)}</dd></div>}</dl></MotionPresence>
+}
 
 function chartPath(values: readonly (number | null)[], maximum: number) {
   let previous: { x: number; y: number } | null = null
@@ -66,7 +78,7 @@ export function MomentumSection({ data = null }: { data?: ActivityData | null })
         <div><p className="presentation-eyebrow">03 / Network activity</p><h2 id="momentum-heading">Small connections.<br /><span>Lasting momentum.</span></h2></div>
         <p>A wider view of your searches, relationships, and introduction opportunities over time.</p>
       </div>
-      <div className="presentation-chart-panel">
+      <div className="presentation-chart-panel" data-reveal="chart-panel">
         <div className="chart-view-control" role="group" aria-label="Chart view">
           <button type="button" aria-pressed={view === 'activity'} onClick={() => { setView('activity'); setSelectedIndex(null) }}>Network activity</button>
           <button type="button" aria-pressed={view === 'searches'} onClick={() => { setView('searches'); setSelectedIndex(null) }}>Company searches</button>
@@ -98,7 +110,7 @@ export function MomentumSection({ data = null }: { data?: ActivityData | null })
               </g>}
               {selected && <path d={`M ${selectedX} 20 V 260`} className="chart-crosshair" vectorEffect="non-scaling-stroke" />}
             </svg>
-            {selected && <div id={`${chartId}-tooltip`} role="tooltip" className="chart-tooltip" style={{ left: `clamp(0px, ${selectedX / 10}% - 5.5rem, max(0px, 100% - 11rem))` }}><strong>{selected.label}</strong>{isExample && <small>Example data</small>}<dl>{view === 'activity' ? <><div><dt>Connections</dt><dd>{formatCount(selected.connections)}</dd></div><div><dt>Opportunities</dt><dd>{formatCount(selected.opportunities)}</dd></div></> : <div><dt>Searches</dt><dd>{formatCount(selected.searches)}</dd></div>}</dl></div>}
+            <ActivityTooltip id={`${chartId}-tooltip`} snapshot={selected ? { point: selected, view, example: isExample, x: selectedX } : null} />
             {!hasValues && <div className="presentation-chart-empty"><span className="presentation-chart-empty-symbol" aria-hidden="true">↗</span><strong>Your story is just beginning.</strong><p>{view === 'searches' ? 'Company search trends will appear here when search history is available.' : 'Your connections and introduction opportunities will appear here when network data is available.'}</p></div>}
           </div>
           <div className="presentation-chart-labels" aria-hidden="true">{intervals.map((label, index) => <span key={index} title={label}>{label}</span>)}</div>

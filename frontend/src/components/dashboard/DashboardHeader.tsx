@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { MotionPresence } from '../motion/MotionPresence'
 
 type DashboardHeaderProps = {
   name: string
@@ -67,15 +68,13 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
         >
           <span aria-hidden="true">{name.trim().charAt(0).toUpperCase() || 'I'}</span>
         </button>
-        {openPanel === 'profile' && (
-          <section className="presentation-popover" id="dashboard-profile" aria-label="Your profile">
+          <MotionPresence open={openPanel === 'profile'} as="section" className="presentation-popover" id="dashboard-profile" aria-label="Your profile">
             <span className="presentation-eyebrow">Your account</span>
             <strong>{name}</strong>
             <p>{email}</p>
             <Link className="profile-account-link" to="/settings#account" onClick={() => setOpenPanel(null)}>Account & preferences <span aria-hidden="true">↗</span></Link>
             <button className="button button--secondary button--full" type="button" onClick={onLogout}>Logout</button>
-          </section>
-        )}
+          </MotionPresence>
         <button
           className="presentation-menu-trigger"
           type="button"
@@ -91,8 +90,7 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
               : <path d="M4 7h16M9 12h11M4 17h16" />}
           </svg>
         </button>
-        {openPanel === 'navigation' && (
-          <nav className="presentation-popover presentation-navigation" id="dashboard-navigation" aria-label={context ? 'Main navigation' : 'Dashboard sections'}>
+          <MotionPresence open={openPanel === 'navigation'} as="nav" className="presentation-popover presentation-navigation" id="dashboard-navigation" aria-label={context ? 'Main navigation' : 'Dashboard sections'}>
             <span className="presentation-eyebrow">{context ? 'Explore Intro Finder' : 'Explore your dashboard'}</span>
             {links.map((link, index) => (
               <Link key={link.href} to={link.href} aria-current={location.pathname === link.href ? 'page' : undefined} reloadDocument={link.href.includes('#')} onClick={() => setOpenPanel(null)}>
@@ -102,8 +100,7 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
               </Link>
             ))}
             <button className="presentation-logout" type="button" onClick={onLogout}>Logout <span aria-hidden="true">↗</span></button>
-          </nav>
-        )}
+          </MotionPresence>
       </div>
     </header>
   )

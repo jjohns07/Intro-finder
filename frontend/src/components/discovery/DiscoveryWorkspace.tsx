@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { companyDiscovery, DiscoveryUnavailableError, type DiscoveryResult, type DiscoveryService } from '../../services/discovery'
 import { DiscoveryArtwork, SearchIcon } from './DiscoveryArtwork'
 import { DiscoveryResults } from './DiscoveryResults'
+import { useSectionReveal } from '../dashboard/useSectionReveal'
+import { WordReveal } from '../motion/WordReveal'
 
 type SearchState =
   | { kind: 'idle' }
@@ -17,6 +19,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
   const [validation, setValidation] = useState('')
   const [state, setState] = useState<SearchState>({ kind: 'idle' })
   const inputRef = useRef<HTMLInputElement>(null)
+  const revealRef = useSectionReveal()
   const requestRef = useRef<AbortController | null>(null)
 
   const cancelRequest = useCallback(() => {
@@ -82,18 +85,18 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
     : state.kind === 'error' ? state.timedOut ? 'The search took too long. Please try again.' : 'The search could not be completed. Please try again.' : ''
 
   return (
-    <main className="discovery-main" id="find-introductions" tabIndex={-1}>
-      <section className="discovery-hero" aria-labelledby="discovery-heading">
+    <main className="discovery-main" id="find-introductions" tabIndex={-1} ref={revealRef}>
+      <section className="discovery-hero" aria-labelledby="discovery-heading" data-reveal="hero">
         <div className="discovery-hero-copy">
           <p className="presentation-eyebrow"><span /> Find introductions</p>
-          <h1 id="discovery-heading">Who do you<br />want to <span>meet?</span></h1>
+          <h1 id="discovery-heading" data-motion-text="words"><WordReveal text="Who do you" /><br /><WordReveal text="want to " start={3} /><span><WordReveal text="meet?" start={5} /></span></h1>
           <p>Search for a company and discover the people who can connect you to its founders and decision-makers.</p>
         </div>
         <DiscoveryArtwork />
         <span className="discovery-hero-caption" aria-hidden="true">A company. A connection. A conversation.</span>
       </section>
 
-      <section className="discovery-search" aria-label="Find a company">
+      <section className="discovery-search" aria-label="Find a company" data-reveal="search">
         <form onSubmit={event => { event.preventDefault(); void runSearch(companyName) }} noValidate role="search" aria-label="Company discovery">
           <label htmlFor="discovery-company-input">Start with a company</label>
           <div className="discovery-search-bar" data-invalid={!!validation}>
@@ -113,7 +116,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
       {!service.available && state.kind !== 'unavailable' && <p className="discovery-availability"><span aria-hidden="true" />Company discovery is not connected yet. Results will be available when search is connected.</p>}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <div className="discovery-state-container" aria-busy={loading}>
-        {state.kind === 'idle' && <section className="discovery-start" aria-labelledby="discovery-start-heading">
+        {state.kind === 'idle' && <section className="discovery-start" aria-labelledby="discovery-start-heading" data-reveal="editorial">
           <div className="discovery-start-heading"><p className="presentation-eyebrow">From curiosity to connection</p><h2 id="discovery-start-heading">Your next conversation<br /> starts here<span>.</span></h2></div>
           <ol className="discovery-guide">
             <li><span>01</span><div><h3>Find the company</h3><p>Start with a name you’re curious about.</p></div></li>
