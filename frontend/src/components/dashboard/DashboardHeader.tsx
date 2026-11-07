@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
 type DashboardHeaderProps = {
   name: string
@@ -6,9 +7,11 @@ type DashboardHeaderProps = {
   logo: ReactNode
   onLogout: () => void
   links: { href: string; label: string }[]
+  brandHref?: string
+  context?: string
 }
 
-export function DashboardHeader({ name, email, logo, onLogout, links }: DashboardHeaderProps) {
+export function DashboardHeader({ name, email, logo, onLogout, links, brandHref = '#overview', context }: DashboardHeaderProps) {
   const [openPanel, setOpenPanel] = useState<'profile' | 'navigation' | null>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLButtonElement>(null)
@@ -40,11 +43,11 @@ export function DashboardHeader({ name, email, logo, onLogout, links }: Dashboar
 
   return (
     <header className="presentation-header">
-      <a className="presentation-brand" href="#overview" aria-label="Intro Finder overview">
+      <Link className="presentation-brand" to={brandHref} reloadDocument={brandHref.includes('#')} aria-label="Intro Finder overview">
         {logo}
         <span>Intro Finder</span>
-      </a>
-      <p className="presentation-greeting">Welcome back, <span>{name.trim().split(/\s+/)[0] || 'there'}.</span></p>
+      </Link>
+      <p className="presentation-greeting">{context || <>Welcome back, <span>{name.trim().split(/\s+/)[0] || 'there'}.</span></>}</p>
       <div
         className="presentation-header-controls"
         ref={controlsRef}
@@ -87,14 +90,14 @@ export function DashboardHeader({ name, email, logo, onLogout, links }: Dashboar
           </svg>
         </button>
         {openPanel === 'navigation' && (
-          <nav className="presentation-popover presentation-navigation" id="dashboard-navigation" aria-label="Dashboard sections">
-            <span className="presentation-eyebrow">Explore your dashboard</span>
+          <nav className="presentation-popover presentation-navigation" id="dashboard-navigation" aria-label={context ? 'Main navigation' : 'Dashboard sections'}>
+            <span className="presentation-eyebrow">{context ? 'Explore Intro Finder' : 'Explore your dashboard'}</span>
             {links.map((link, index) => (
-              <a key={link.href} href={link.href} onClick={() => setOpenPanel(null)}>
+              <Link key={link.href} to={link.href} reloadDocument={link.href.includes('#')} onClick={() => setOpenPanel(null)}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 {link.label}
                 <span aria-hidden="true">↗</span>
-              </a>
+              </Link>
             ))}
             <button className="presentation-logout" type="button" onClick={onLogout}>Logout <span aria-hidden="true">↗</span></button>
           </nav>

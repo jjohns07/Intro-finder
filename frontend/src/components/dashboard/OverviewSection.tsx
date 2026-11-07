@@ -1,4 +1,5 @@
 import { AnimatedMetric } from './AnimatedMetric'
+import { Link } from 'react-router-dom'
 
 export type OverviewMetrics = {
   totalConnections: number | null
@@ -34,10 +35,10 @@ export function OverviewSection({ metrics = emptyMetrics }: { metrics?: Overview
         <div className="presentation-overview-copy">
           <h1 id="overview-heading">Your Network.<br /><span>New Possibilities.</span></h1>
           <p>Discover meaningful connections and find your way to the people who matter.</p>
-          <a className="button button--primary presentation-primary-action" href="#explore">
+          <Link className="button button--primary presentation-primary-action" to="/find-introductions">
             Explore introductions
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg>
-          </a>
+          </Link>
         </div>
         <figure className="presentation-network-art">
           <svg viewBox="0 0 440 360" aria-hidden="true" focusable="false">

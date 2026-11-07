@@ -7,7 +7,7 @@ in `src/styles/auth.css` and `src/styles/dashboard.css`. The latest section and
 data-visualisation refinements extend those styles in
 `src/styles/dashboard-refinements.css`; shared legacy composition remains in
 `src/App.css`.
-The design system does not change routes, data, or authentication.
+The visual system preserves authentication and the existing data contracts.
 
 ## Color roles
 
@@ -102,6 +102,44 @@ strength is shown only when supplied with a valid score and calculation
 explanation. The fallback path diagram is explicitly an illustration.
 
 The backend currently exposes authentication, with no dashboard/discovery data
-endpoints. LinkedIn and X are unavailable integrations. Company search retains
-its unavailable-service feedback; revisit and discovery actions focus the
-existing search field. Authentication and JWT handling remain unchanged.
+endpoints. LinkedIn and X are unavailable integrations. Dashboard search, revisit,
+and discovery actions open the protected `/find-introductions` page. A submitted
+company name is carried into that page and searched automatically. Authentication
+and JWT handling remain unchanged.
+
+## Find introductions
+
+`src/components/discovery` and `src/styles/discovery.css` extend the presentation
+design with an editorial hero, decorative network artwork, a prominent search
+field, company profiles, and ordered introduction paths. The shared dashboard
+header provides profile, logout, and navigation controls without a sidebar.
+Paths use horizontal nodes on desktop and vertical nodes on mobile; paths with
+more than four people stay vertical at all sizes. Expandable path details include
+supplied relationship notes, calculation explanations, and safe profile links.
+Results reveal on entering the viewport; loading, focus, and state transitions
+respect reduced motion. Images fall back to initials if unavailable.
+
+The search supports validation, clear/cancel, duplicate-submission prevention,
+request cancellation, stale-response protection, a 20-second timeout, and retry.
+Separate states cover initial discovery, loading, unavailable service, no company,
+company without paths, missing path data, service errors, and complete results.
+
+`src/services/discovery.ts` defines a presentation adapter contract. Its default
+service explicitly reports unavailable and makes no network requests. There is
+no guessed endpoint, fake OAuth, sample-company search, or live X/LinkedIn request.
+Connecting discovery still requires a backend route and an approved data adapter.
+The adapter must validate responses and hydrate backend path IDs into people;
+the backend domain result alone does not include those person records or edges.
+It must preserve source/fixture flags, supply real relationship edges, and map the
+authenticated person explicitly before setting `isCurrentUser`. Future HTTP
+integration should use the existing JWT convention and the supplied AbortSignal.
+
+The frontend contract adds optional description, image/profile URLs, hydrated
+people and edges, and `calculatedStrength` to support richer approved sources.
+Backend `confidence` is deliberately not relabeled as strength. A strength must
+include a finite 0–1 score and a nonempty calculation explanation. Incomplete,
+cyclic, or mismatched paths are withheld; missing relationships are labeled as
+not provided. `paths: null` means unavailable; `paths: []` means no returned paths.
+Fixture provenance anywhere in a result produces a prominent demonstration label.
+Production includes no demonstration records or test-fixture route. Suggestions
+remain unavailable because no suggestion service exists.

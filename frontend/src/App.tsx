@@ -4,6 +4,8 @@ import './App.css'
 import './styles/auth.css'
 import './styles/dashboard.css'
 import './styles/dashboard-refinements.css'
+import './styles/discovery.css'
+import { FindIntroductionsPage } from './components/discovery/FindIntroductionsPage'
 import { DashboardHeader } from './components/dashboard/DashboardHeader'
 import { OverviewSection } from './components/dashboard/OverviewSection'
 import { ConnectionPathsSection } from './components/dashboard/ConnectionPathsSection'
@@ -344,19 +346,10 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
       searchRef.current?.focus()
       return
     }
-    setSearchMessage({
-      type: 'info',
-      text: 'Company discovery is not connected yet. Please try again once the search API is available.',
-    })
+    navigate(`/find-introductions?company=${encodeURIComponent(companyName.trim())}`)
   }
 
-  const focusCompanySearch = () => {
-    searchRef.current?.focus({ preventScroll: true })
-    searchRef.current?.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      block: 'center',
-    })
-  }
+  const openCompanySearch = (company?: string) => navigate(company ? `/find-introductions?company=${encodeURIComponent(company)}` : '/find-introductions')
 
   return (
     <div className="presentation-dashboard">
@@ -369,7 +362,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
           onLogout={handleLogout}
           links={[
             { href: '#overview', label: 'Overview' },
-            { href: '#explore', label: 'Find introductions' },
+            { href: '/find-introductions', label: 'Find introductions' },
             { href: '#momentum', label: 'Network activity' },
             { href: '#your-network', label: 'Your network' },
             { href: '#activity', label: 'Recent searches' },
@@ -413,17 +406,9 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
 
           <MomentumSection />
           <NetworkSection />
-          <RecentSearchesSection onSearch={focusCompanySearch} onRevisit={(search) => {
-            setCompanyName(search.company.name)
-            setSearchMessage(null)
-            focusCompanySearch()
-          }} />
-          <ConnectionPathsSection onExplore={(company) => {
-            setCompanyName(company)
-            setSearchMessage(null)
-            focusCompanySearch()
-          }} />
-          <DiscoverySection onSearch={focusCompanySearch} />
+          <RecentSearchesSection onSearch={() => openCompanySearch()} onRevisit={(search) => openCompanySearch(search.company.name)} />
+          <ConnectionPathsSection onExplore={openCompanySearch} />
+          <DiscoverySection onSearch={() => openCompanySearch()} />
 
         </main>
         <footer className="presentation-footer"><span>Intro Finder</span><p>Meaningful connections. New possibilities.</p><a href="#overview">Back to top ↑</a></footer>
@@ -495,6 +480,14 @@ function App() {
                 user={currentUser!}
                 onLogout={() => setCurrentUser(null)}
               />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/find-introductions"
+          element={
+            <ProtectedRoute user={currentUser}>
+              <FindIntroductionsPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} />
             </ProtectedRoute>
           }
         />
