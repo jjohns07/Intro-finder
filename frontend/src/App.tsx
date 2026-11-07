@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate,   Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
+import './styles/auth.css'
+import architecturePhoto from './assets/auth-entrance.jpg'
+import { AuthIcon, AuthInput, PasswordField } from './components/AuthFields'
 
 type AuthMode = 'login' | 'register'
 type ThemeMode = 'light' | 'dark'
@@ -14,7 +17,6 @@ type User = {
 type AuthFormState = {
   name: string
   email: string
-  company: string
   password: string
   confirmPassword: string
 }
@@ -51,16 +53,9 @@ const getAuthHeaders =   (tokenOverride?: string | null): HeadersInit => {
   return headers
 }
 
-const featureHighlights = [
-  'Track warm introductions from your network',
-  'Prioritize outreach with context-rich contact data',
-  'Collaborate on intros with your team and investors',
-]
-
 const initialFormState: AuthFormState = {
   name: '',
   email: '',
-  company: '',
   password: '',
   confirmPassword: '',
 }
@@ -86,23 +81,11 @@ function ThemeToggle({ theme, onToggle }: { theme: ThemeMode; onToggle: () => vo
 
 function GoogleLogo() {
   return (
-    <svg className="google-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.22 3.61l6.87-6.87C35.71 2.57 30.43 0 24 0 14.64 0 6.5 5.38 2.54 13.22l8.05 6.25C12.5 14.56 17.72 9.5 24 9.5Z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.56 24.55c0-1.59-.14-3.12-.4-4.55H24v8.6h12.86c-.55 2.94-2.22 5.43-4.72 7.12l7.64 5.92C43.83 36.91 46.56 31.35 46.56 24.55Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M32.14 39.7c-2.59 1.73-5.89 2.75-8.14 2.75-6.29 0-11.62-4.19-13.51-9.81l-8.12 6.29C6.82 43.3 14.72 48 24 48c7.32 0 13.46-2.41 17.96-6.53l-9.82-1.77Z"
-      />
-      <path
-        fill="#34A853"
-        d="M10.49 32.64A14.15 14.15 0 0 1 9.5 24c0-1.57.27-3.08.75-4.52L2.54 13.22A23.52 23.52 0 0 0 0 24c0 3.8.91 7.4 2.54 10.57l7.95-6.29Z"
-      />
+    <svg className="google-logo" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.258h2.909c1.702-1.567 2.683-3.875 2.683-6.615z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.468-.806 5.957-2.18l-2.909-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.583-5.036-3.71H.957v2.332C2.438 15.983 5.482 18 9 18z" />
+      <path fill="#FBBC05" d="M3.964 10.712A5.41 5.41 0 0 1 3.682 9c0-.594.102-1.17.282-1.712V4.956H.957A9.002 9.002 0 0 0 0 9c0 1.452.347 2.827.957 4.044l3.007-2.332z" />
+      <path fill="#EA4335" d="M9 3.578c1.321 0 2.507.454 3.44 1.346l2.581-2.581C13.464.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.956l3.007 2.332C4.672 5.161 6.656 3.578 9 3.578z" />
     </svg>
   )
 }
@@ -195,177 +178,85 @@ function TypewriterHeadline({
   )
 }
 
-function AnimatedStat({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
-  const [displayValue, setDisplayValue] = useState(0)
-  const statRef = useRef<HTMLDivElement | null>(null)
-  const hasAnimatedRef = useRef(false)
-
-  useEffect(() => {
-    const element = statRef.current
-
-    if (!element) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-
-        if (!entry?.isIntersecting || hasAnimatedRef.current) {
-          return
-        }
-
-        hasAnimatedRef.current = true
-        const startTime = performance.now()
-        const duration = 1200
-
-        const update = (time: number) => {
-          const progress = Math.min((time - startTime) / duration, 1)
-          const eased = 1 - (1 - progress) ** 3
-          setDisplayValue(Math.round(value * eased))
-
-          if (progress < 1) {
-            requestAnimationFrame(update)
-          }
-        }
-
-        requestAnimationFrame(update)
-      },
-      { threshold: 0.35 },
-    )
-
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [value])
-
-  return (
-    <div className="stat-box" ref={statRef}>
-      <span>
-        {displayValue}
-        {suffix}
-      </span>
-      <small>{label}</small>
-    </div>
-  )
-}
-
-function PasswordField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-  autoComplete,
-  name,
-  show,
-  onToggle,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  placeholder: string
-  autoComplete: string
-  name: string
-  show: boolean
-  onToggle: () => void
-}) {
-  return (
-    <label className="field" htmlFor={id}>
-      <span>{label}</span>
-      <div className="password-input-wrap">
-        <input
-          id={id}
-          type={show ? 'text' : 'password'}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-        />
-        <button
-          type="button"
-          className="password-toggle"
-          onClick={onToggle}
-          aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
-          aria-pressed={show}
-        >
-          {show ? (
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M2.5 12S6.1 5.5 12 5.5 21.5 12 21.5 12 17.9 18.5 12 18.5 2.5 12 2.5 12Zm9.5 3.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M3 3.5 20.5 21l-1 1-3.32-3.32A12.8 12.8 0 0 1 12 18.5C6.1 18.5 2.5 12 2.5 12a13.1 13.1 0 0 1 5.2-5.8L4 4.5 3 3.5Zm9 2.42A9.6 9.6 0 0 1 17.5 12c-.5.9-1.2 1.7-2 2.4L14.4 13a3.5 3.5 0 0 1-5.2-4.1L8.8 8.3c.8-.4 1.7-.6 2.7-.6Zm-1.3 6.35L13.3 14a2.5 2.5 0 0 1-3.1-3.1Zm6.5-5.1L16.9 8a9.7 9.7 0 0 1 2.8 4.1c-.8 1.2-1.9 2.3-3.2 3.1l-1.2-1.2a8.4 8.4 0 0 0 2.3-2.5 8.7 8.7 0 0 0-2.9-3.3Z" />
-            </svg>
-          )}
-        </button>
-      </div>
-    </label>
-  )
-}
-
 function AuthScreen({
   onAuthenticated,
-  theme,
-  onToggleTheme,
 }: {
   onAuthenticated: (user: User) => void
-  theme: ThemeMode
-  onToggleTheme: () => void
 }) {
   const navigate = useNavigate()
   const [mode, setMode] = useState<AuthMode>('login')
   const [formData, setFormData] = useState<AuthFormState>(initialFormState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState<StatusState | null>(null)
+  const [errors, setErrors] = useState<Partial<Record<keyof AuthFormState, string>>>({})
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
+  const [isSwitching, setIsSwitching] = useState(false)
+  const [copyrightYear] = useState(() => new Date().getFullYear())
+  const switchTimer = useRef<number | undefined>(undefined)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const isLogin = mode === 'login'
+
+  useEffect(() => () => window.clearTimeout(switchTimer.current), [])
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
     setFormData((current) => ({ ...current, [name]: value }))
+    setErrors((current) => ({ ...current, [name]: undefined }))
+    setStatus(null)
   }
 
   const handleModeChange = (nextMode: AuthMode) => {
-    setMode(nextMode)
-    setStatus(null)
-    setShowPassword(false)
-    setShowConfirmPassword(false)
-    setFormData(initialFormState)
+    if (isSubmitting || isSwitching || nextMode === mode) return
+
+    const finishSwitch = () => {
+      setMode(nextMode)
+      setStatus(null)
+      setErrors({})
+      setShowPassword(false)
+      setShowConfirmPassword(false)
+      setFormData(initialFormState)
+      setIsSwitching(false)
+      requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }))
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finishSwitch()
+    } else {
+      setIsSwitching(true)
+      switchTimer.current = window.setTimeout(finishSwitch, 140)
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isSubmitting || isSwitching) return
     setStatus(null)
 
     const email = formData.email.trim()
     const password = formData.password
+    const nextErrors: Partial<Record<keyof AuthFormState, string>> = {}
 
+    if (!isLogin && formData.name.trim().length < 2) {
+      nextErrors.name = 'Name must be at least 2 characters long.'
+    }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setStatus({ type: 'error', text: 'Please enter a valid email address.' })
-      return
+      nextErrors.email = 'Please enter a valid email address.'
     }
-
-    if (!password || password.length < 8) {
-      setStatus({ type: 'error', text: 'Password must be at least 8 characters long.' })
-      return
+    if (!password) {
+      nextErrors.password = 'Please enter your password.'
+    } else if (!isLogin && password.length < 8) {
+      nextErrors.password = 'Password must be at least 8 characters long.'
     }
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      nextErrors.confirmPassword = 'Passwords do not match.'
+    }
+    setErrors(nextErrors)
 
-    if (!isLogin) {
-      const name = formData.name.trim()
-
-      if (name.length < 2) {
-        setStatus({ type: 'error', text: 'Name must be at least 2 characters long.' })
-        return
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        setStatus({ type: 'error', text: 'Passwords do not match.' })
-        return
-      }
+    const firstInvalidField = Object.keys(nextErrors)[0]
+    if (firstInvalidField) {
+      document.getElementById(firstInvalidField)?.focus()
+      return
     }
 
     setIsSubmitting(true)
@@ -381,7 +272,6 @@ function AuthScreen({
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       })
-
       const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
@@ -411,179 +301,95 @@ function AuthScreen({
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <aside className="auth-brand-panel" aria-label="Intro Finder overview">
-          <div className="brand-header-row">
-            <div className="brand-header">
-              <LogoMark />
-              <div className="brand-copy">
-                <strong>Intro Finder</strong>
-                <span>Warm intros, smarter</span>
-              </div>
+    <div className="auth-experience">
+      <aside className="auth-visual" aria-label="Welcome to Intro Finder">
+        <img className="auth-architecture" src={architecturePhoto} alt="" width="1600" height="1067" fetchPriority="high" />
+        <div className="auth-visual-overlay" />
+        <div className="auth-visual-content">
+          <div className="auth-brand">
+            <LogoMark />
+            <span>Intro Finder</span>
+          </div>
+
+          <div className="auth-welcome" key={mode}>
+            <div className="auth-welcome-rule" />
+            <div className="auth-reveal-mask">
+              <h2>{isLogin ? 'Welcome Back' : 'Your Next Chapter'}</h2>
             </div>
-          </div>
-
-          <div className="eyebrow">Private network</div>
-          <TypewriterHeadline as="h1" className="brand-headline" text="Find warm paths to the right people" />
-          <p className="brand-description">
-            Use your professional network to unlock thoughtful introductions and move faster
-            with the right context.
-          </p>
-
-          <ul className="feature-list">
-            {featureHighlights.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-
-          <div className="brand-stats">
-            <AnimatedStat value={24} label="warm leads" />
-            <AnimatedStat value={92} label="response rate" suffix="%" />
-          </div>
-        </aside>
-
-        <main className="auth-form-panel">
-          <div className="auth-toolbar">
-            <div className="auth-mode-switch" role="tablist" aria-label="Authentication mode">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={isLogin}
-                className={isLogin ? 'active' : ''}
-                onClick={() => handleModeChange('login')}
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!isLogin}
-                className={!isLogin ? 'active' : ''}
-                onClick={() => handleModeChange('register')}
-              >
-                Register
-              </button>
-            </div>
-            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-          </div>
-
-          <div className="form-heading">
-            <h2>{isLogin ? 'Welcome back' : 'Create your account'}</h2>
             <p>
               {isLogin
-                ? 'Sign in to continue your intro workflow.'
-                : 'Set up a secure profile to start finding warm connections.'}
+                ? "Glad to see you again. Let's continue where you left off."
+                : 'Meaningful connections. New possibilities. It all starts here.'}
             </p>
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {!isLogin && (
-              <label className="field">
-                <span>Full name</span>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
+          <small className="auth-copyright">© {copyrightYear} Intro Finder. All rights reserved.</small>
+        </div>
+      </aside>
+
+      <main className="auth-stage">
+        <section className="auth-entry-card" data-mode={mode} aria-labelledby="auth-title">
+          <div key={mode} className={`auth-card-body ${isSwitching ? 'is-switching' : ''}`}>
+            <div className="auth-card-emblem"><LogoMark /></div>
+            <header className="auth-heading">
+              <h1 id="auth-title" ref={headingRef} tabIndex={-1}>{isLogin ? 'Login' : 'Create Account'}</h1>
+              <p>{isLogin ? 'Login to your account to continue.' : 'Join Intro Finder and turn your network into meaningful introductions.'}</p>
+            </header>
+
+            <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting} aria-label={isLogin ? 'Login' : 'Create account'}>
+              <fieldset className="auth-fields" disabled={isSubmitting || isSwitching}>
+                <legend className="sr-only">{isLogin ? 'Login details' : 'Registration details'}</legend>
+                {!isLogin && (
+                  <AuthInput id="name" name="name" label="Full name" icon="person" value={formData.name} onChange={handleChange} placeholder="Alex Lee" autoComplete="name" error={errors.name} />
+                )}
+                <AuthInput id="email" name="email" type="email" label="Email address" icon="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" autoComplete="email" error={errors.email} />
+                <PasswordField
+                  id="password"
+                  name="password"
+                  label="Password"
+                  value={formData.password}
                   onChange={handleChange}
-                  placeholder="Alex Lee"
-                  autoComplete="name"
+                  placeholder={isLogin ? 'Enter your password' : 'Create a password'}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  show={showPassword}
+                  onToggle={() => setShowPassword((current) => !current)}
+                  hint={isLogin ? undefined : 'Use at least 8 characters.'}
+                  error={errors.password}
                 />
-              </label>
-            )}
+                {!isLogin && (
+                  <PasswordField id="confirmPassword" name="confirmPassword" label="Confirm password" value={formData.confirmPassword} onChange={handleChange} placeholder="Repeat your password" autoComplete="new-password" show={showConfirmPassword} onToggle={() => setShowConfirmPassword((current) => !current)} error={errors.confirmPassword} />
+                )}
+              </fieldset>
 
-            <label className="field">
-              <span>Email address</span>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-            </label>
+              {Object.values(errors).some(Boolean) && <p className="sr-only" role="alert">Please review the highlighted fields.</p>}
+              {status && <div className={`form-status auth-feedback ${status.type}`} role="alert">{status.text}</div>}
 
-            {!isLogin && (
-              <label className="field">
-                <span>Company</span>
-                <input
-                  type="text"
-                  name="company"
-                  value={formData.company}
-                  onChange={handleChange}
-                  placeholder="Northstar Capital"
-                  autoComplete="organization"
-                />
-              </label>
-            )}
+              <button type="submit" className="primary-button auth-submit" disabled={isSubmitting || isSwitching}>
+                {isSubmitting && <span className="auth-spinner" aria-hidden="true" />}
+                <span>{isSubmitting ? (isLogin ? 'Logging in…' : 'Creating account…') : (isLogin ? 'Login' : 'Create Account')}</span>
+                {!isSubmitting && <AuthIcon name="arrow" />}
+              </button>
+              <span className="sr-only" role="status">{isSubmitting ? (isLogin ? 'Logging in. Please wait.' : 'Creating your account. Please wait.') : ''}</span>
+            </form>
 
-            <PasswordField
-              id="password"
-              label="Password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              autoComplete={isLogin ? 'current-password' : 'new-password'}
-              name="password"
-              show={showPassword}
-              onToggle={() => setShowPassword((current) => !current)}
-            />
+            {isLogin && <div className="auth-social">
+              <div className="divider"><span>or continue with</span></div>
+              <button type="button" className="secondary-button google-button" disabled aria-describedby="google-unavailable">
+                <GoogleLogo />
+                <span>Continue with Google</span>
+              </button>
+              <p id="google-unavailable" className="auth-social-note">Google sign-in is not available yet.</p>
+            </div>}
 
-            {!isLogin && (
-              <PasswordField
-                id="confirmPassword"
-                label="Confirm password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Repeat your password"
-                autoComplete="new-password"
-                name="confirmPassword"
-                show={showConfirmPassword}
-                onToggle={() => setShowConfirmPassword((current) => !current)}
-              />
-            )}
-
-            {isLogin && (
-              <div className="inline-links">
-                <label className="remember-me">
-                  <input type="checkbox" />
-                  <span>Remember me</span>
-                </label>
-                <button type="button" className="text-link">
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
-            {status && (
-              <div className={`form-status ${status.type}`} aria-live="polite">
-                {status.text}
-              </div>
-            )}
-
-            <button type="submit" className="primary-button" disabled={isSubmitting}>
-              {isSubmitting ? (isLogin ? 'Signing in...' : 'Creating account...') : isLogin ? 'Sign in to dashboard' : 'Create account'}
-            </button>
-          </form>
-
-          <div className="divider">
-            <span>or continue with</span>
+            <p className="auth-switch">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+              <button type="button" disabled={isSubmitting || isSwitching} onClick={() => handleModeChange(isLogin ? 'register' : 'login')}>
+                {isLogin ? 'Sign up' : 'Login'}
+              </button>
+            </p>
           </div>
-
-          <button type="button" className="secondary-button google-button">
-            <GoogleLogo />
-            <span>Continue with Google</span>
-          </button>
-
-          <p className="auth-switch">
-            {isLogin ? 'Need an account?' : 'Already have an account?'}{' '}
-            <button type="button" onClick={() => handleModeChange(isLogin ? 'register' : 'login')}>
-              {isLogin ? 'Create one' : 'Sign in'}
-            </button>
-          </p>
-        </main>
-      </div>
+        </section>
+      </main>
     </div>
   )
 }
@@ -913,7 +719,7 @@ function App() {
             currentUser ? (
               <Navigate to="/dashboard" replace />
             ) : (
-              <AuthScreen onAuthenticated={setCurrentUser} theme={theme} onToggleTheme={handleThemeToggle} />
+              <AuthScreen onAuthenticated={setCurrentUser} />
             )
           }
         />

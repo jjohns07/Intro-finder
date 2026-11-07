@@ -1,0 +1,400 @@
+/* Shared visual primitives. Existing selectors are aliases so page markup and
+   behavior can stay intact. Layout-specific rules remain in App.css. */
+
+:is(.type-display, .brand-headline, .dashboard-headline) {
+  font-size: var(--text-display);
+  font-weight: 600;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:is(.type-heading, .form-heading h2) {
+  font-size: var(--text-heading);
+  font-weight: 600;
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+:is(.type-section, .topbar-title-wrap h1, .stat-box span) {
+  font-size: var(--text-section);
+  font-weight: 600;
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--color-text);
+}
+
+:is(.type-title, .card-header h3) {
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+  color: var(--color-text);
+}
+
+.type-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+}
+
+:is(.type-supporting, .brand-description, .dashboard-hero > p, .form-heading p, .auth-switch, .feature-list li) {
+  font-size: var(--text-supporting);
+  line-height: var(--leading-body);
+  color: var(--color-text-soft);
+}
+
+:is(.type-label, .field, .user-meta span) {
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: var(--leading-label);
+  color: var(--color-text);
+}
+
+:is(.type-metadata, .brand-copy span, .user-meta small, .empty-state small) {
+  font-size: var(--text-metadata);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+:is(.type-eyebrow, .eyebrow, .topbar-kicker, .card-kicker, .company-search-label, .stat-box small, .divider span, .theme-toggle-label) {
+  font-size: var(--text-metadata);
+  font-weight: 600;
+  line-height: var(--leading-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Pair .button with --primary, --secondary, --quiet or --danger. */
+:is(.button, .primary-button, .secondary-button, .primary-search-button, .support-cta, .logout-button, .theme-toggle, .icon-button, .password-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  font-size: var(--text-supporting);
+  font-weight: 600;
+  line-height: var(--leading-label);
+  text-align: center;
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+:is(.button--primary, .primary-button, .primary-search-button) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+:is(.button--secondary, .secondary-button, .support-cta, .logout-button) {
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+}
+
+:is(.button--quiet, .support-cta.subtle, .icon-button, .password-toggle) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-soft);
+  box-shadow: none;
+}
+
+.button--danger {
+  color: var(--color-error);
+  border-color: var(--color-error-border);
+  background: var(--color-error-soft);
+}
+
+.button--full {
+  width: 100%;
+}
+
+:is(.icon-button, .password-toggle) {
+  flex-shrink: 0;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: var(--space-2);
+}
+
+:is(.text-link, .auth-switch button) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-strong);
+  font-weight: 600;
+  text-underline-offset: 0.25em;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+:is(.button, .primary-button, .secondary-button, .primary-search-button, .support-cta, .logout-button, .theme-toggle, .icon-button, .password-toggle, .nav-item, .dropdown-item):is(:disabled, [aria-disabled='true']) {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* Native form controls keep their semantics and browser interactions. */
+:is(.input, .select, .textarea, .auth-form input:not([type='checkbox']), .company-search-input-wrap input) {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: var(--input-padding, var(--space-3) var(--space-4));
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-strong);
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-label);
+  caret-color: var(--color-focus);
+  transition: border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+:is(.input, .textarea, .auth-form input, .company-search-input-wrap input)::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+:is(.input, .select, .textarea, .auth-form input:not([type='checkbox']), .company-search-input-wrap input):focus {
+  border-color: var(--color-focus);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+:is(.input, .select, .textarea, .auth-form input, .company-search-input-wrap input):is([aria-invalid='true'], :user-invalid) {
+  border-color: var(--color-error);
+}
+
+:is(.input, .select, .textarea, .auth-form input, .company-search-input-wrap input):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+:is(.checkbox, .remember-me input) {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  accent-color: var(--color-primary-strong);
+}
+
+/* Opaque surfaces, neutral borders and restrained depth. */
+:is(.card, .panel, .auth-card, .dashboard-layout, .support-card, .stat-box, .loading-state) {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+:is(.card, .panel) {
+  padding: var(--panel-padding);
+}
+
+:is(.panel, .auth-card, .dashboard-layout) {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
+}
+
+:is(.card--elevated, .panel--elevated) {
+  background: var(--color-surface-elevated);
+}
+
+.panel-stack {
+  display: grid;
+  gap: var(--section-gap);
+  min-width: 0;
+}
+
+:is(.badge, .eyebrow) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-soft);
+}
+
+/* SVG stroke/fill remains opt-in so existing multicolor icons keep their art. */
+.analytics-value,
+.stat-box span {
+  color: var(--color-analytics);
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-surface {
+  color: var(--color-analytics);
+  background: var(--color-analytics-soft);
+  border-color: var(--color-analytics-border);
+}
+
+:is(.icon, .icon-button svg, .password-toggle svg, .card-icon svg, .google-logo) {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+}
+
+.icon--small {
+  --icon-size: 1rem;
+}
+
+.icon--large {
+  --icon-size: 1.5rem;
+}
+
+:is(.password-toggle svg, .card-icon svg) {
+  fill: currentColor;
+}
+
+.icon--analytics {
+  color: var(--color-analytics);
+}
+
+:is(.card-icon, .empty-state-illustration) {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-soft);
+}
+
+/* Navigation and dropdowns share neutral hover/selected treatments. */
+:is(.nav-item, .dropdown-item, .auth-mode-switch button) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-soft);
+  font-size: var(--text-supporting);
+  font-weight: 500;
+  line-height: var(--leading-label);
+  text-align: left;
+  text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+:is(.nav-item.active, .nav-item[aria-current='page'], .dropdown-item[aria-selected='true'], .auth-mode-switch button.active) {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  list-style: none;
+}
+
+.dropdown-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.dropdown-content {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: var(--z-dropdown);
+  width: min(18rem, calc(100vw - 2 * var(--space-4)));
+  max-height: min(28rem, 65vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.dropdown-separator {
+  height: 1px;
+  margin: var(--space-2);
+  border: 0;
+  background: var(--color-border);
+}
+
+:is(.notice, .form-status, .search-status) {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-soft);
+  font-size: var(--text-supporting);
+  font-weight: 500;
+  line-height: var(--leading-body);
+}
+
+:is(.notice--error, .form-status.error, .search-status.error) {
+  background: var(--color-error-soft);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+:is(.notice--success, .form-status.success) {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
+}
+
+@media (hover: hover) {
+  :is(.button, .secondary-button, .support-cta, .logout-button, .theme-toggle, .icon-button, .password-toggle):hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--color-surface-strong);
+    border-color: var(--color-control-border);
+    color: var(--color-text);
+  }
+
+  :is(.button--primary, .primary-button, .primary-search-button):hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
+  }
+
+  .button--danger:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--color-error-soft);
+    border-color: var(--color-error);
+    color: var(--color-error);
+  }
+
+  :is(.nav-item, .dropdown-item, .auth-mode-switch button):hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--color-surface-strong);
+    color: var(--color-text);
+  }
+
+  :is(.text-link, .auth-switch button):hover {
+    text-decoration: underline;
+  }
+}
