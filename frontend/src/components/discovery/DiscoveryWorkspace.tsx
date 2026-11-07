@@ -2,15 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { companyDiscovery, type DiscoveryResult, type DiscoveryService } from '../../services/discovery'
 import { DiscoveryArtwork, SearchIcon } from './DiscoveryArtwork'
-import { DiscoveryResults } from './DiscoveryResults'
+import { DiscoveryMatches } from './DiscoveryResults'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { WordReveal } from '../motion/WordReveal'
 
 type SearchState =
   | { kind: 'idle' }
-  | { kind: 'loading' | 'not-found' | 'unavailable' | 'pending'; query: string }
+  | { kind: 'loading' | 'not-found' | 'unavailable' | 'pending'; query: string; message?: string }
   | { kind: 'error'; query: string; timedOut?: boolean; message?: string }
-  | { kind: 'success'; query: string; result: DiscoveryResult }
+  | { kind: 'success'; query: string; matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix' }
 
 export function DiscoveryWorkspace({ initialCompany = '', service = companyDiscovery }: {
   initialCompany?: string
@@ -32,9 +32,9 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
 
   const runSearch = useCallback(async (value: string) => {
     if (requestRef.current) return
-    const query = value.trim()
-    if (!query || query.length > 160) {
-      setValidation(!query ? 'Please enter a company name before searching.' : 'Use a company name with 160 characters or fewer.')
+    const query = value.normalize('NFKC').trim().replace(/\s+/g, ' ')
+    if (value.length > 160 || query.length < 2 || query.length > 160 || /[\p{Cc}\p{Cf}]/u.test(value) || !/[\p{L}\p{N}]/u.test(query)) {
+      setValidation('Enter a company name with 2–160 characters, without control characters.')
       inputRef.current?.focus()
       return
     }
@@ -43,7 +43,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
     setSavedId(null)
     setState({ kind: 'loading', query })
     // Reuse the key after an uncertain network failure or effect restart.
-    // A confirmed response completes the attempt; another submission is new.
+    // A final response completes the attempt; a pending replay retains its key.
     if (executionRef.current?.query !== query) {
       executionRef.current = { query, id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('') }
     }
@@ -59,12 +59,15 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
     try {
       const record = await service.search(query, { signal: controller.signal, requestId: executionRef.current.id })
       if (controller.signal.aborted || requestRef.current !== controller) return
-      executionRef.current = null
+      if (record.status !== 'pending') executionRef.current = null
       setSavedId(record.id)
       if (record.status === 'pending') setState({ kind: 'pending', query })
-      else if (record.outcome === 'success' && record.result) setState({ kind: 'success', query, result: record.result })
+      else if ((record.outcome === 'success' || record.outcome === 'ambiguous') && (record.matches?.length || record.result)) {
+        const matches = record.matches?.length ? record.matches : [record.result!]
+        setState({ kind: 'success', query, matches, total: record.totalMatches ?? matches.length, matchMode: record.matchMode })
+      }
       else if (record.outcome === 'no_matches') setState({ kind: 'not-found', query })
-      else if (record.outcome === 'provider_unavailable') setState({ kind: 'unavailable', query })
+      else if (record.outcome === 'provider_unavailable') setState({ kind: 'unavailable', query, message: record.message })
       else setState({ kind: 'error', query, message: record.message })
     } catch (error) {
       if (controller.signal.aborted || requestRef.current !== controller) return
@@ -94,7 +97,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
   }
   const loading = state.kind === 'loading'
   const announcement = state.kind === 'loading' ? `Searching for ${state.query}.`
-    : state.kind === 'success' ? `Company result for ${state.result.company.name} is ready below.`
+    : state.kind === 'success' ? `${state.total} possible company ${state.total === 1 ? 'match is' : 'matches are'} ready below.`
     : state.kind === 'not-found' ? `No company found for ${state.query}.`
     : state.kind === 'unavailable' ? 'Your search attempt was saved. No discovery provider is connected.'
     : state.kind === 'pending' ? 'Your search is still in progress. Open its saved record to check the status.'
@@ -106,7 +109,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
         <div className="discovery-hero-copy">
           <p className="presentation-eyebrow"><span /> Find introductions</p>
           <h1 id="discovery-heading" data-motion-text="words"><WordReveal text="Who do you" /><br /><WordReveal text="want to " start={3} /><span><WordReveal text="meet?" start={5} /></span></h1>
-          <p>Search for a company and discover the people who can connect you to its founders and decision-makers.</p>
+          <p>Find a company, explore its founders and decision-makers, and review the sources behind each candidate.</p>
         </div>
         <DiscoveryArtwork />
         <span className="discovery-hero-caption" aria-hidden="true">A company. A connection. A conversation.</span>
@@ -138,19 +141,19 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
           <ol className="discovery-guide">
             <li><span>01</span><div><h3>Find the company</h3><p>Start with a name you’re curious about.</p></div></li>
             <li><span>02</span><div><h3>Get to know the people</h3><p>Explore founders and decision-makers when their details are available.</p></div></li>
-            <li><span>03</span><div><h3>Discover a way in</h3><p>Follow introduction paths supported by available connection data.</p></div></li>
+            <li><span>03</span><div><h3>Look for a way in</h3><p>Introduction paths need relationship data. Connection discovery is not connected yet.</p></div></li>
           </ol>
         </section>}
 
         {loading && <section className="discovery-loading discovery-state-card" aria-labelledby="discovery-loading-heading">
           <span className="discovery-state-symbol" aria-hidden="true"><SearchIcon /></span>
-          <div><p className="presentation-eyebrow">Discovery in progress</p><h2 id="discovery-loading-heading">Looking for {state.query}<span>…</span></h2><p>Company information and available introduction paths will appear here.</p><button type="button" className="presentation-inline-action" onClick={() => { cancelRequest(); setState({ kind: 'idle' }); inputRef.current?.focus() }}>Cancel search <span aria-hidden="true">×</span></button></div>
+          <div><p className="presentation-eyebrow">Discovery in progress</p><h2 id="discovery-loading-heading">Looking for {state.query}<span>…</span></h2><p>Checking company matches and available people information. Connection paths require a separate relationship source.</p><button type="button" className="presentation-inline-action" onClick={() => { cancelRequest(); setState({ kind: 'idle' }); inputRef.current?.focus() }}>Cancel search <span aria-hidden="true">×</span></button></div>
           <div className="discovery-skeleton" aria-hidden="true"><span /><span /><span /></div>
         </section>}
 
         {state.kind === 'unavailable' && <section className="discovery-state-card" aria-labelledby="discovery-unavailable-heading">
           <span className="discovery-state-symbol" aria-hidden="true">↗</span>
-          <div><p className="presentation-eyebrow">Discovery is on its way</p><h2 id="discovery-unavailable-heading">The first connection<br />is still to come<span>.</span></h2><p>Your attempt to find <strong>{state.query}</strong> was saved, but no discovery provider is connected. No company or connection results were found. You can search again when a provider is available.</p><div className="discovery-platform-notes"><span>LinkedIn <small>Not configured</small></span><span>X <small>Not configured</small></span></div><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <span aria-hidden="true">↗</span></button></div>
+          <div><p className="presentation-eyebrow">Discovery unavailable</p><h2 id="discovery-unavailable-heading">Company search<br />is not connected<span>.</span></h2><p>Your attempt to find <strong>{state.query}</strong> was saved. {state.message || 'No discovery provider is configured. No provider search was performed.'}</p><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <span aria-hidden="true">↗</span></button></div>
         </section>}
 
         {state.kind === 'not-found' && <section className="discovery-state-card" aria-labelledby="discovery-not-found-heading">
@@ -161,7 +164,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
         {state.kind === 'error' && <section className="discovery-state-card discovery-error" aria-labelledby="discovery-error-heading">
           <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : state.message || 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <span aria-hidden="true">↗</span></button></div>
         </section>}
-        {state.kind === 'success' && <DiscoveryResults key={state.query} result={state.result} onNewSearch={newSearch} />}
+        {state.kind === 'success' && <DiscoveryMatches key={savedId ?? state.query} matches={state.matches} total={state.total} matchMode={state.matchMode} onNewSearch={newSearch} />}
       </div>
       <footer className="discovery-closing"><span aria-hidden="true">↗</span><p>Meaningful introductions.<br /><strong>New possibilities.</strong></p><span>Let curiosity lead the way.</span></footer>
     </main>

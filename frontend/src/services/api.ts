@@ -12,7 +12,8 @@ export function getAuthHeaders(tokenOverride?: string | null): Record<string, st
 
 export class ApiError extends Error {
   readonly status: number
-  constructor(message: string, status: number) { super(message); this.name = 'ApiError'; this.status = status }
+  readonly data?: unknown
+  constructor(message: string, status: number, data?: unknown) { super(message); this.name = 'ApiError'; this.status = status; this.data = data }
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -27,7 +28,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal, cache: 'no-store' })
     if (response.status === 204) return undefined as T
     const data = await response.json().catch(() => null)
-    if (!response.ok) throw new ApiError(response.status === 401 ? 'Your session has expired. Please sign out and log in again.' : data?.message || 'The request could not be completed. Please try again.', response.status)
+    if (!response.ok) throw new ApiError(response.status === 401 ? 'Your session has expired. Please sign out and log in again.' : data?.message || 'The request could not be completed. Please try again.', response.status, data)
     if (data === null) throw new ApiError('The server returned an invalid response.', 502)
     return data as T
   } finally { window.clearTimeout(timeout); options.signal?.removeEventListener('abort', abort) }

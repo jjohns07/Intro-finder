@@ -28,7 +28,7 @@ export function FindIntroductionsPage({ user, logo, onLogout }: {
         { href: '/history', label: 'Search history' },
         { href: '/settings', label: 'Settings' },
       ]} />
-      <nav className="discovery-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Discovery / Company search</span></nav>
+      <nav className="discovery-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Discovery / Companies & people</span></nav>
       <DiscoveryWorkspace key={location.key} initialCompany={initialCompany} />
       <AppFooter backToTop="#find-introductions" />
     </div>

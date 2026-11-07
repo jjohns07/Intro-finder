@@ -3,6 +3,44 @@ import { CompanyMark } from '../dashboard/CompanyMark'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { isDemonstration, safeWebUrl, type DiscoveryConnection, type DiscoveryPath, type DiscoveryPerson, type DiscoveryResult } from '../../services/discovery'
 
+export function DiscoveryMatches({ matches, total, matchMode, onNewSearch }: {
+  matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix'; onNewSearch: () => void
+}) {
+  const ambiguous = total > 1 || matchMode === 'prefix'
+  const [selected, setSelected] = useState<string | null>(ambiguous ? null : matches[0]?.company.id ?? null)
+  const active = matches.find(match => match.company.id === selected)
+  return <>
+    {ambiguous && <section className="discovery-match-picker" aria-labelledby="company-matches-heading">
+      <p className="presentation-eyebrow">Possible company matches</p>
+      <h2 id="company-matches-heading">Which company did you mean?</h2>
+      <p>{matchMode === 'prefix' ? 'No exact name matched. These company names start with your search.' : 'Several companies share this name.'} Choose a company to review its people and sources.</p>
+      {total > matches.length && <p>Showing {matches.length} of {total} matches. Use a more specific company name to narrow your search.</p>}
+      <div className="discovery-match-options">{matches.map(({ company }) => <button type="button" key={company.id} aria-pressed={selected === company.id} onClick={() => setSelected(company.id)}>
+        <strong>{company.name}</strong>
+        <span>{[company.industry, company.location].filter(Boolean).join(' · ') || 'Location and industry not supplied'}</span>
+        <span>{safeWebUrl(company.website) ? new URL(safeWebUrl(company.website)!).hostname : 'Website not supplied'}</span>
+        <small>{company.attribution?.provider || 'Provider result'} · {company.id}</small>
+      </button>)}</div>
+    </section>}
+    {active && <DiscoveryResults key={active.company.id} result={active} onNewSearch={onNewSearch} />}
+  </>
+}
+
+function CandidateEvidence({ person }: { person: DiscoveryPerson }) {
+  if (!person.evidence?.length) return <p className="discovery-source-note">Supporting employment evidence was not supplied.</p>
+  return <details className="discovery-evidence">
+    <summary>Review source evidence</summary>
+    {person.verification && <><p><strong>Provider-supported candidate</strong></p><p>{person.verification.explanation}</p><p>{person.verification.limitation}</p></>}
+    <ul>{person.evidence.map((item, index) => <li key={`${item.field}-${index}`}>
+      <strong>{item.title}</strong>
+      <p>{item.affiliation === 'current' ? 'Current affiliation reported by provider' : item.affiliation === 'historical' ? 'Historical affiliation' : 'Current affiliation unknown'}{item.startDate ? ` · From ${item.startDate}` : ''}{item.endDate ? ` · Until ${item.endDate}` : ''}</p>
+      <p>{item.provider} · Company ID: {item.companyId}</p>
+      {item.lastSeen && <p>Last seen by provider: {item.lastSeen}</p>}
+      {item.sourceCount !== undefined && <p>Provider reports {item.sourceCount} contributing {item.sourceCount === 1 ? 'source' : 'sources'} for this employment record.</p>}
+    </li>)}</ul>
+  </details>
+}
+
 function PersonPortrait({ person }: { person: DiscoveryPerson }) {
   const [failedUrl, setFailedUrl] = useState<string>()
   const imageUrl = safeWebUrl(person.imageUrl)
@@ -84,6 +122,7 @@ export function DiscoveryResults({ result, onNewSearch }: { result: DiscoveryRes
   })
   const incompleteCount = (result.paths?.length ?? 0) - resolvedPaths.length
   const targets = [...new Map([
+    ...result.people.filter(person => person.role === 'founder' || person.role === 'executive'),
     ...(result.targetPerson ? [result.targetPerson] : []),
     ...resolvedPaths.map(({ people }) => people.at(-1)!),
   ].map(person => [person.id, person])).values()]
@@ -94,17 +133,19 @@ export function DiscoveryResults({ result, onNewSearch }: { result: DiscoveryRes
       {demonstration && <p className="discovery-demo-notice">Demonstration data — these companies, people and paths are not verified search results or your real connections.</p>}
       {!!result.warnings?.length && <div className="discovery-result-warnings"><strong>Source notes</strong><ul>{result.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
       <article className="discovery-company" data-reveal aria-labelledby="discovery-company-heading">
-        <div className="discovery-company-top"><p className="presentation-eyebrow">Company match</p><span>{demonstration ? 'Demonstration' : result.source === 'approved-source' ? 'Approved data source' : 'Source unavailable'}</span></div>
+        <div className="discovery-company-top"><p className="presentation-eyebrow">Company match</p><span>{demonstration ? 'Demonstration' : company.attribution?.provider || (result.source === 'approved-source' ? 'Provider result' : 'Source unavailable')}</span></div>
         <div className="discovery-company-grid">
           <div className="discovery-company-summary">
             <div className="discovery-company-identity"><CompanyMark name={company.name} logoUrl={safeWebUrl(company.logoUrl)} /><div>{company.industry && <p className="discovery-industry">{company.industry}</p>}<h2 id="discovery-company-heading">{company.name}</h2></div></div>
             <p className="discovery-company-description">{company.description || 'A company description was not provided by the data source.'}</p>
+            {company.location && <p className="discovery-source-note">{company.location}</p>}
             {website && <a className="presentation-inline-action" href={website} target="_blank" rel="noopener noreferrer">{new URL(website).hostname.replace(/^www\./, '')}<span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>}
           </div>
-          <div className="discovery-decision-makers"><p className="presentation-eyebrow">People to know</p>{targets.length ? targets.map(person => <div className="discovery-target" key={person.id}>
-            <PersonPortrait person={person} /><div><h3>{person.name}</h3>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}</div>
-          </div>) : <p>Founders and decision-makers were not included in this result.</p>}</div>
+          <div className="discovery-decision-makers"><p className="presentation-eyebrow">Founder & decision-maker candidates</p>{targets.length ? targets.map(person => <div className="discovery-target" key={person.id}>
+            <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} /></div>
+          </div>) : <p>{result.peopleStatus === 'not_configured' ? 'People discovery is not enabled. Company information is still available.' : result.peopleStatus === 'no_candidates' ? 'No founder or decision-maker candidates with matching employment evidence were found in the returned records.' : result.peopleStatus && result.peopleStatus !== 'available' ? 'People discovery could not complete. See the source notes above; company information is still available.' : 'Founders and decision-makers were not included in this result.'}</p>}</div>
         </div>
+        {company.attribution && <p className="discovery-source-note">Source: {company.attribution.provider} · Record {company.attribution.recordId}. {safeWebUrl(company.profileUrl) && <a href={safeWebUrl(company.profileUrl)} target="_blank" rel="noopener noreferrer">View company profile ↗</a>}</p>}
         {date && Number.isFinite(date.getTime()) && <p className="discovery-source-note">Result generated <time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date)}</time></p>}
       </article>
       <div className="discovery-paths-heading" data-reveal="editorial"><div><p className="presentation-eyebrow">The people between you</p><h2>Your introduction paths<span>.</span></h2></div>{resolvedPaths.length > 0 && <p>{resolvedPaths.length} {resolvedPaths.length === 1 ? 'available path' : 'available paths'}<span>Connection depth follows the supplied path.</span></p>}</div>
@@ -112,7 +153,7 @@ export function DiscoveryResults({ result, onNewSearch }: { result: DiscoveryRes
       {resolvedPaths.length ? <div className="discovery-path-list">{resolvedPaths.map(({ path, people }, index) => <PathPanel key={path.id} path={path} people={people} connections={result.connections ?? []} index={index} />)}</div> : <div className="discovery-no-paths">
         <span className="discovery-state-symbol" aria-hidden="true">↗</span>
         <h3>{result.paths === null || incompleteCount ? 'Introduction paths are not available yet.' : 'No introduction path found.'}</h3>
-        <p>{result.paths === null ? 'This source has company information, but has not supplied connection paths.' : incompleteCount ? 'The source needs to provide the people along each path before you can explore it.' : `We found ${company.name}, but no path was returned in the available network data. Try another company to continue exploring.`}</p>
+        <p>{result.paths === null ? 'Company and people discovery is separate from connection discovery. No relationship source is connected, so we cannot establish a warm introduction. A social follow does not establish a trusted relationship.' : incompleteCount ? 'The source needs to provide the people along each path before you can explore it.' : `We found ${company.name}, but no path was returned in the available network data. Try another company to continue exploring.`}</p>
         <button type="button" className="presentation-inline-action" onClick={onNewSearch}>Search another company <span aria-hidden="true">↗</span></button>
       </div>}
     </section>

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth'
-import SearchHistory from '../models/SearchHistory'
+import SearchHistory, { type HistoryDocument } from '../models/SearchHistory'
 import { historySummary, historyDetail, settleInterruptedSearches } from '../services/history'
 
 function pageNumber(value: unknown, fallback: number, maximum: number) {
@@ -25,13 +25,13 @@ export async function listHistory(req: AuthenticatedRequest, res: Response) {
   const user = req.user!.id
   await settleInterruptedSearches(user)
   const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const filter = {
-    user, ...(status !== 'all' ? { status } : {}),
-    ...(escaped ? { $or: ['originalQuery', 'company.name', 'target.name', 'target.title', 'founders.name'].map(field => ({ [field]: { $regex: escaped, $options: 'i' } })) } : {}),
+  const filter: mongoose.QueryFilter<HistoryDocument> = {
+    user, ...(status !== 'all' ? { status: status as 'pending' | 'completed' | 'failed' } : {}),
+    ...(escaped ? { $or: ['originalQuery', 'company.name', 'matches.company.name', 'target.name', 'target.title', 'founders.name'].map(field => ({ [field]: { $regex: escaped, $options: 'i' } })) } : {}),
   }
   const direction = sort === 'oldest' ? 1 : -1
   const [records, total] = await Promise.all([
-    SearchHistory.find(filter).select('-result -requestId -user').sort({ createdAt: direction, _id: direction }).skip((page - 1) * pageSize).limit(pageSize),
+    SearchHistory.find(filter).select('-result -matches -requestId -queryFingerprint -user').sort({ createdAt: direction, _id: direction }).skip((page - 1) * pageSize).limit(pageSize),
     SearchHistory.countDocuments(filter),
   ])
   res.json({ records: records.map(record => historySummary(record)), source: 'account', page, pageSize, total, totalPages: Math.ceil(total / pageSize) })

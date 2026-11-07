@@ -26,6 +26,8 @@ export interface Person {
   imageUrl?: string
   profileUrl?: string
   isCurrentUser?: boolean
+  evidence?: EmploymentEvidence[]
+  verification?: { confidence: 'provider-supported'; explanation: string; limitation: string }
 }
 
 export interface Company {
@@ -37,6 +39,30 @@ export interface Company {
   logoUrl?: string
   source: DataSourceKind
   metadata?: Record<string, unknown>
+  location?: string
+  profileUrl?: string
+  attribution?: { provider: string; recordId: string; retrievedAt: string; reliability: 'aggregated-provider-data' }
+}
+
+export interface EmploymentEvidence {
+  provider: string
+  recordId: string
+  field: string
+  companyId: string
+  title: string
+  affiliation: 'current' | 'historical' | 'unknown'
+  startDate?: string
+  endDate?: string
+  lastSeen?: string
+  sourceCount?: number
+  profileUrl?: string
+}
+
+export type PeopleStatus = 'available' | 'no_candidates' | 'not_configured' | 'rate_limited' | 'provider_error' | 'provider_timeout' | 'provider_access_denied' | 'quota_exceeded'
+export interface DiscoverySearchResult {
+  matches: DiscoveryResult[]
+  total: number
+  matchMode: 'exact' | 'prefix'
 }
 
 export interface Connection {
@@ -79,6 +105,9 @@ export interface DiscoveryResult {
   source: DataSourceKind
   generatedAt: string
   warnings: string[]
+  peopleStatus?: PeopleStatus
+  peopleTruncated?: boolean
+  connectionStatus?: 'unavailable'
 }
 
 export interface SocialPlatformAdapter {

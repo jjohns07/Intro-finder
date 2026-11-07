@@ -43,7 +43,7 @@ export function SearchHistoryContent({ service = searchHistoryService }: { servi
                 const name = historyName(record)
                 return <li className="history-record" key={record.id} data-reveal="row" style={{ '--record-delay': `${Math.min(index, 5) * 45}ms` } as CSSProperties}>
                   <CompanyMark name={name} logoUrl={safeWebUrl(record.company?.logoUrl)} />
-                  <div className="history-company"><h2>{name}</h2><p>{record.target ? <>{record.target.name}{record.target.title && <span> · {record.target.title}</span>}</> : 'No person information saved'}</p></div>
+                  <div className="history-company"><h2>{name}</h2><p>{record.target ? <>{record.target.name}{record.target.title && <span> · {record.target.title}</span>}</> : record.candidateCount ? `${record.candidateCount} people candidates saved` : 'No person information saved'}</p></div>
                   <div className="history-record-meta">{date ? <time dateTime={date.toISOString()} title={date.toLocaleString()}>{date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time> : <span>Date unavailable</span>}<span className={`search-state search-state--${record.status}`}>{historyStatus(record)}</span></div>
                   <div className="history-record-actions">
                     <Link className="history-reopen" to={`/history/${encodeURIComponent(record.id)}`} aria-label={`Open saved search for ${name}`}>Open <span aria-hidden="true">↗</span></Link>

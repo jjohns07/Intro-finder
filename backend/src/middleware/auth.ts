@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import User from '../models/User'
 import { verifyToken } from '../config/auth'
+import { getDatabaseStatus } from '../config/db'
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -28,6 +29,11 @@ export async function protect(
 
     if (!payload.sub) {
       res.status(401).json({ message: 'Invalid token.' })
+      return
+    }
+
+    if (getDatabaseStatus() !== 'connected') {
+      res.status(503).json({ message: 'Account services are temporarily unavailable. Please try again.' })
       return
     }
 

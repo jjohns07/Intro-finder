@@ -24,7 +24,7 @@ export function RecentSearchesSection({ onSearch }: {
       : searches?.length ? <ol className="recent-search-feed" aria-label="Recent company searches">
       {searches.map((search, index) => <li key={search.id} data-reveal="row" style={{ '--item-delay': `${Math.min(index, 5) * 65}ms` } as React.CSSProperties}>
         <CompanyMark name={historyName(search)} logoUrl={safeWebUrl(search.company?.logoUrl)} />
-        <div className="search-feed-company"><h3>{historyName(search)}</h3><p>{search.target ? <>{search.target.name}{search.target.title && <span> · {search.target.title}</span>}</> : 'No person information saved'}</p></div>
+        <div className="search-feed-company"><h3>{historyName(search)}</h3><p>{search.target ? <>{search.target.name}{search.target.title && <span> · {search.target.title}</span>}</> : search.candidateCount ? `${search.candidateCount} people candidates saved` : 'No person information saved'}</p></div>
         <div className="search-feed-meta"><SearchDate value={search.searchedAt} /><span className={`search-state search-state--${search.status}`}>{historyStatus(search)}</span></div>
         <Link className="presentation-inline-action" to={`/history/${encodeURIComponent(search.id)}`} aria-label={`Open saved search for ${historyName(search)}`}>Open <span aria-hidden="true">↗</span></Link>
       </li>)}

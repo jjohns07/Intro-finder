@@ -4,7 +4,7 @@ import { ApiError } from '../../services/api'
 import { historyName, historyStatus, searchHistoryService, type SavedSearch } from '../../services/history'
 import { AccountPageLayout, type AccountPageProps } from './AccountPageLayout'
 import { DeleteSearchButton } from './DeleteSearchButton'
-import { DiscoveryResults } from '../discovery/DiscoveryResults'
+import { DiscoveryMatches } from '../discovery/DiscoveryResults'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
 
 type DetailState = { kind: 'ready'; record: SavedSearch } | { kind: 'error'; message: string; missing: boolean }
@@ -53,7 +53,7 @@ export function SavedSearchPage(props: AccountPageProps) {
             </div>
             <p>Search again creates a new search. This saved result stays unchanged.</p>
           </section>
-          {state.record.result ? <DiscoveryResults result={state.record.result} onNewSearch={() => navigate('/find-introductions')} />
+          {state.record.matches?.length || state.record.result ? <DiscoveryMatches matches={state.record.matches?.length ? state.record.matches : [state.record.result!]} total={state.record.totalMatches || 1} matchMode={state.record.matchMode} onNewSearch={() => navigate('/find-introductions')} />
             : <section className="history-empty" aria-labelledby="saved-outcome-heading"><p className="presentation-eyebrow">{historyStatus(state.record)}</p><h2 id="saved-outcome-heading">{state.record.status === 'pending' ? 'This search is still in progress.' : state.record.outcome === 'no_matches' ? 'No company matched this search.' : state.record.outcome === 'provider_unavailable' ? 'Discovery was not connected.' : 'No result was saved.'}</h2><p>{state.record.message || 'No company, founder or introduction information was saved with this search.'}</p></section>}
         </>}
     </main>

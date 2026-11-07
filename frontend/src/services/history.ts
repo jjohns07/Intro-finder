@@ -2,7 +2,7 @@ import type { RecentSearch } from '../components/dashboard/data'
 import type { DiscoveryResult } from './discovery'
 import { apiRequest } from './api'
 
-export type SearchOutcome = 'success' | 'no_matches' | 'provider_unavailable' | 'provider_error'
+export type SearchOutcome = 'success' | 'ambiguous' | 'no_matches' | 'invalid_query' | 'provider_unavailable' | 'provider_error' | 'provider_timeout' | 'rate_limited' | 'provider_access_denied' | 'quota_exceeded'
 export type HistoryFilters = { q?: string; status?: 'all' | 'pending' | 'completed' | 'failed'; sort?: 'recent' | 'oldest'; page?: number; pageSize?: number }
 export type SavedSearch = RecentSearch & {
   originalQuery: string
@@ -12,6 +12,10 @@ export type SavedSearch = RecentSearch & {
   message?: string
   provenance: { provider: string; source: 'approved-source' | 'disabled'; snapshotVersion: number }
   result: DiscoveryResult | null
+  matches?: readonly DiscoveryResult[]
+  totalMatches?: number
+  matchMode?: 'exact' | 'prefix'
+  retryAfterSeconds?: number
 }
 
 export type SearchHistorySnapshot = {
@@ -47,5 +51,11 @@ export function historyStatus(record: RecentSearch) {
   if (record.outcome === 'no_matches') return 'No match'
   if (record.outcome === 'provider_unavailable') return 'Provider unavailable'
   if (record.outcome === 'provider_error') return 'Provider error'
+  if (record.outcome === 'ambiguous') return 'Possible matches'
+  if (record.outcome === 'rate_limited') return 'Rate limited'
+  if (record.outcome === 'provider_timeout') return 'Provider timeout'
+  if (record.outcome === 'provider_access_denied') return 'Provider access denied'
+  if (record.outcome === 'quota_exceeded') return 'Provider credits exhausted'
+  if (record.outcome === 'invalid_query') return 'Invalid company name'
   return record.status === 'completed' ? 'Completed' : 'Failed'
 }
