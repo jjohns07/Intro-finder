@@ -20,8 +20,10 @@ export type NetworkDistribution = { label: string; count: number }
 
 export type RecentSearch = {
   id: string
-  company: { name: string; logoUrl?: string }
-  target?: { name: string; title?: string }
+  originalQuery?: string
+  company: { name: string; logoUrl?: string } | null
+  target?: { name: string; title?: string } | null
+  outcome?: 'success' | 'no_matches' | 'provider_unavailable' | 'provider_error' | null
   searchedAt?: string
   status: 'completed' | 'pending' | 'failed'
 }

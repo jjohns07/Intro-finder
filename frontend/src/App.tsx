@@ -12,6 +12,8 @@ import { AppFooter } from './components/AppFooter'
 import { AboutProjectPage } from './components/account/AboutProjectPage'
 import { PageTransition } from './components/motion/PageTransition'
 import { SearchHistoryPage } from './components/account/SearchHistoryPage'
+import { SavedSearchPage } from './components/account/SavedSearchPage'
+import { API_BASE_URL as API_ORIGIN, getStoredToken, setStoredToken, clearStoredToken, getAuthHeaders } from './services/api'
 import { SettingsPage } from './components/account/SettingsPage'
 import { FindIntroductionsPage } from './components/discovery/FindIntroductionsPage'
 import { DashboardHeader } from './components/dashboard/DashboardHeader'
@@ -45,31 +47,7 @@ type StatusState = {
   text: string
 }
 
-const API_BASE_URL = 'https://intro-finder-api.onrender.com/api/auth'
-const TOKEN_STORAGE_KEY = 'introfinder_token'
-
-const getStoredToken = (): string | null => sessionStorage.getItem(TOKEN_STORAGE_KEY)
-
-const setStoredToken = (token: string): void => {
-  sessionStorage.setItem(TOKEN_STORAGE_KEY, token)
-}
-
-const clearStoredToken = (): void => {
-  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
-}
-
-const getAuthHeaders =   (tokenOverride?: string | null): HeadersInit => {
-  const token = tokenOverride ?? getStoredToken()
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
-  return headers
-}
+const API_BASE_URL = `${API_ORIGIN}/auth`
 
 const initialFormState: AuthFormState = {
   name: '',
@@ -430,7 +408,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
 
           <MomentumSection />
           <NetworkSection />
-          <RecentSearchesSection onSearch={() => openCompanySearch()} onRevisit={(search) => openCompanySearch(search.company.name)} />
+          <RecentSearchesSection onSearch={() => openCompanySearch()} />
           <ConnectionPathsSection onExplore={openCompanySearch} />
           <DiscoverySection onSearch={() => openCompanySearch()} />
 
@@ -515,6 +493,7 @@ function App() {
           }
         />
         <Route path="/history" element={<ProtectedRoute user={currentUser}><SearchHistoryPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
+        <Route path="/history/:id" element={<ProtectedRoute user={currentUser}><SavedSearchPage key={currentUser?.id} user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute user={currentUser}><SettingsPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
       </Routes>

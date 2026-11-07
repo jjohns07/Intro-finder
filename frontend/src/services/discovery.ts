@@ -1,6 +1,7 @@
-// Presentation contract for a future approved-source discovery adapter. The
-// backend currently has domain types, but no discovery route or service to call.
-// Keep that absence explicit instead of guessing an endpoint or using fixtures.
+import { apiRequest } from './api'
+import type { SavedSearch } from './history'
+
+// The server owns discovery execution, provenance and saved snapshots.
 export type DiscoverySource = 'approved-source' | 'local-fixture' | 'disabled'
 
 export type DiscoveryPerson = {
@@ -61,22 +62,16 @@ export type DiscoveryResult = {
 
 export type DiscoveryService = {
   available: boolean
-  search: (companyName: string, options: { signal: AbortSignal }) => Promise<DiscoveryResult | null>
-}
-
-export class DiscoveryUnavailableError extends Error {
-  constructor() {
-    super('Company discovery is not connected yet.')
-    this.name = 'DiscoveryUnavailableError'
-  }
+  search: (companyName: string, options: { signal: AbortSignal; requestId: string }) => Promise<SavedSearch>
 }
 
 export const companyDiscovery: DiscoveryService = {
-  available: false,
-  async search(_companyName, { signal }) {
-    signal.throwIfAborted()
-    throw new DiscoveryUnavailableError()
-  },
+  available: true,
+  search: (companyName, { signal, requestId }) => apiRequest<SavedSearch>('/discovery/search', {
+    method: 'POST', signal,
+    headers: { 'Idempotency-Key': requestId },
+    body: JSON.stringify({ companyName }),
+  }),
 }
 
 export function safeWebUrl(value?: string): string | undefined {

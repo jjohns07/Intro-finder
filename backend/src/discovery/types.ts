@@ -23,6 +23,9 @@ export interface Person {
   source: DataSourceKind
   isFixture?: boolean
   metadata?: Record<string, unknown>
+  imageUrl?: string
+  profileUrl?: string
+  isCurrentUser?: boolean
 }
 
 export interface Company {
@@ -30,6 +33,8 @@ export interface Company {
   name: string
   website?: string
   industry?: string
+  description?: string
+  logoUrl?: string
   source: DataSourceKind
   metadata?: Record<string, unknown>
 }
@@ -39,7 +44,7 @@ export interface Connection {
   fromPersonId: string
   toPersonId: string
   relationship: RelationshipStrength
-  strength: number
+  strength?: number
   source: DataSourceKind
   notes?: string
   metadata?: Record<string, unknown>
@@ -50,9 +55,10 @@ export interface IntroductionPath {
   startPersonId: string
   targetPersonId: string
   path: string[]
-  pathType: PathType
-  confidence: number
-  explanation: string
+  pathType?: PathType
+  confidence?: number
+  explanation?: string
+  calculatedStrength?: { score: number; explanation: string }
   source: DataSourceKind
   isFixture?: boolean
 }
@@ -67,7 +73,9 @@ export interface DiscoveryRequest {
 export interface DiscoveryResult {
   company: Company
   targetPerson?: Person
-  paths: IntroductionPath[]
+  people?: Person[]
+  connections?: Connection[]
+  paths: IntroductionPath[] | null
   source: DataSourceKind
   generatedAt: string
   warnings: string[]

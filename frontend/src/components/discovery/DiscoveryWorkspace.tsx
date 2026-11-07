@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { companyDiscovery, DiscoveryUnavailableError, type DiscoveryResult, type DiscoveryService } from '../../services/discovery'
+import { Link } from 'react-router-dom'
+import { companyDiscovery, type DiscoveryResult, type DiscoveryService } from '../../services/discovery'
 import { DiscoveryArtwork, SearchIcon } from './DiscoveryArtwork'
 import { DiscoveryResults } from './DiscoveryResults'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
@@ -7,8 +8,8 @@ import { WordReveal } from '../motion/WordReveal'
 
 type SearchState =
   | { kind: 'idle' }
-  | { kind: 'loading' | 'not-found' | 'unavailable'; query: string }
-  | { kind: 'error'; query: string; timedOut?: boolean }
+  | { kind: 'loading' | 'not-found' | 'unavailable' | 'pending'; query: string }
+  | { kind: 'error'; query: string; timedOut?: boolean; message?: string }
   | { kind: 'success'; query: string; result: DiscoveryResult }
 
 export function DiscoveryWorkspace({ initialCompany = '', service = companyDiscovery }: {
@@ -21,6 +22,8 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
   const inputRef = useRef<HTMLInputElement>(null)
   const revealRef = useSectionReveal()
   const requestRef = useRef<AbortController | null>(null)
+  const executionRef = useRef<{ query: string; id: string } | null>(null)
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   const cancelRequest = useCallback(() => {
     requestRef.current?.abort()
@@ -37,7 +40,13 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
     }
     setValidation('')
     setCompanyName(query)
+    setSavedId(null)
     setState({ kind: 'loading', query })
+    // Reuse the key after an uncertain network failure or effect restart.
+    // A confirmed response completes the attempt; another submission is new.
+    if (executionRef.current?.query !== query) {
+      executionRef.current = { query, id: Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('') }
+    }
     const controller = new AbortController()
     requestRef.current = controller
     const timeout = window.setTimeout(() => {
@@ -48,12 +57,18 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
     }, 20_000)
     controller.signal.addEventListener('abort', () => window.clearTimeout(timeout), { once: true })
     try {
-      const result = await service.search(query, { signal: controller.signal })
+      const record = await service.search(query, { signal: controller.signal, requestId: executionRef.current.id })
       if (controller.signal.aborted || requestRef.current !== controller) return
-      setState(result ? { kind: 'success', query, result } : { kind: 'not-found', query })
+      executionRef.current = null
+      setSavedId(record.id)
+      if (record.status === 'pending') setState({ kind: 'pending', query })
+      else if (record.outcome === 'success' && record.result) setState({ kind: 'success', query, result: record.result })
+      else if (record.outcome === 'no_matches') setState({ kind: 'not-found', query })
+      else if (record.outcome === 'provider_unavailable') setState({ kind: 'unavailable', query })
+      else setState({ kind: 'error', query, message: record.message })
     } catch (error) {
       if (controller.signal.aborted || requestRef.current !== controller) return
-      setState({ kind: error instanceof DiscoveryUnavailableError ? 'unavailable' : 'error', query })
+      setState({ kind: 'error', query, timedOut: error instanceof DOMException && error.name === 'TimeoutError', message: error instanceof Error ? error.message : undefined })
     } finally {
       window.clearTimeout(timeout)
       if (requestRef.current === controller) requestRef.current = null
@@ -61,16 +76,16 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
   }, [service])
 
   useEffect(() => {
-    // A dashboard submission starts an external discovery request on arrival.
-    // oxlint-disable-next-line react/set-state-in-effect
-    if (initialCompany) void runSearch(initialCompany)
-    return cancelRequest
+    // Defer auto-submission so a Strict Mode effect probe cannot send twice.
+    const start = window.setTimeout(() => { if (initialCompany) void runSearch(initialCompany) }, 0)
+    return () => { window.clearTimeout(start); cancelRequest() }
   }, [initialCompany, runSearch, cancelRequest])
 
   const editSearch = (value: string) => {
     cancelRequest()
     setCompanyName(value)
     setValidation('')
+    setSavedId(null)
     setState({ kind: 'idle' })
   }
   const newSearch = () => {
@@ -81,7 +96,8 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
   const announcement = state.kind === 'loading' ? `Searching for ${state.query}.`
     : state.kind === 'success' ? `Company result for ${state.result.company.name} is ready below.`
     : state.kind === 'not-found' ? `No company found for ${state.query}.`
-    : state.kind === 'unavailable' ? 'Company discovery is not connected yet. No search was performed.'
+    : state.kind === 'unavailable' ? 'Your search attempt was saved. No discovery provider is connected.'
+    : state.kind === 'pending' ? 'Your search is still in progress. Open its saved record to check the status.'
     : state.kind === 'error' ? state.timedOut ? 'The search took too long. Please try again.' : 'The search could not be completed. Please try again.' : ''
 
   return (
@@ -116,6 +132,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
       {!service.available && state.kind !== 'unavailable' && <p className="discovery-availability"><span aria-hidden="true" />Company discovery is not connected yet. Results will be available when search is connected.</p>}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <div className="discovery-state-container" aria-busy={loading}>
+        {savedId && <p className="account-notice">{state.kind === 'pending' ? 'Search recorded.' : 'Search saved to your history.'} <Link to={`/history/${encodeURIComponent(savedId)}`}>Open saved search <span aria-hidden="true">↗</span></Link></p>}
         {state.kind === 'idle' && <section className="discovery-start" aria-labelledby="discovery-start-heading" data-reveal="editorial">
           <div className="discovery-start-heading"><p className="presentation-eyebrow">From curiosity to connection</p><h2 id="discovery-start-heading">Your next conversation<br /> starts here<span>.</span></h2></div>
           <ol className="discovery-guide">
@@ -133,15 +150,16 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
 
         {state.kind === 'unavailable' && <section className="discovery-state-card" aria-labelledby="discovery-unavailable-heading">
           <span className="discovery-state-symbol" aria-hidden="true">↗</span>
-          <div><p className="presentation-eyebrow">Discovery is on its way</p><h2 id="discovery-unavailable-heading">The first connection<br />is still to come<span>.</span></h2><p>Company discovery is not connected yet, so we couldn’t search for <strong>{state.query}</strong>. Your search will be available once the service is connected.</p><div className="discovery-platform-notes"><span>LinkedIn <small>Not configured</small></span><span>X <small>Not configured</small></span></div><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <span aria-hidden="true">↗</span></button></div>
+          <div><p className="presentation-eyebrow">Discovery is on its way</p><h2 id="discovery-unavailable-heading">The first connection<br />is still to come<span>.</span></h2><p>Your attempt to find <strong>{state.query}</strong> was saved, but no discovery provider is connected. No company or connection results were found. You can search again when a provider is available.</p><div className="discovery-platform-notes"><span>LinkedIn <small>Not configured</small></span><span>X <small>Not configured</small></span></div><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <span aria-hidden="true">↗</span></button></div>
         </section>}
 
         {state.kind === 'not-found' && <section className="discovery-state-card" aria-labelledby="discovery-not-found-heading">
           <span className="discovery-state-symbol" aria-hidden="true"><SearchIcon /></span><div><p className="presentation-eyebrow">Keep exploring</p><h2 id="discovery-not-found-heading">No company found<span>.</span></h2><p>We couldn’t find <strong>{state.query}</strong> in the available data. Check the spelling, use the company’s full name, or try another company.</p><button className="presentation-inline-action" type="button" onClick={() => { inputRef.current?.focus(); inputRef.current?.select() }}>Refine your search <span aria-hidden="true">↗</span></button></div>
         </section>}
 
+        {state.kind === 'pending' && <section className="discovery-state-card"><div><h2>Your search is still in progress.</h2><p>Open the saved search above to check its status. Your request has already been recorded.</p></div></section>}
         {state.kind === 'error' && <section className="discovery-state-card discovery-error" aria-labelledby="discovery-error-heading">
-          <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <span aria-hidden="true">↗</span></button></div>
+          <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : state.message || 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <span aria-hidden="true">↗</span></button></div>
         </section>}
         {state.kind === 'success' && <DiscoveryResults key={state.query} result={state.result} onNewSearch={newSearch} />}
       </div>
