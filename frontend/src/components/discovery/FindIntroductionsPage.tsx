@@ -24,6 +24,8 @@ export function FindIntroductionsPage({ user, logo, onLogout }: {
         { href: '/find-introductions', label: 'Find introductions' },
         { href: '/dashboard#your-network', label: 'Your network' },
         { href: '/dashboard#activity', label: 'Recent searches' },
+        { href: '/history', label: 'Search history' },
+        { href: '/settings', label: 'Settings' },
       ]} />
       <div className="discovery-breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Discovery / Company search</span></div>
       <DiscoveryWorkspace key={location.key} initialCompany={initialCompany} />

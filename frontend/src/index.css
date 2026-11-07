@@ -19,12 +19,13 @@
   --color-teal: #55c5b7;
 
   /* Semantic roles preserve the existing component token names. */
-  --color-primary: var(--color-gold);
+  --color-primary: #e8b982;
   --color-primary-hover: #f0cba0;
   --color-primary-strong: var(--color-gold);
   --color-primary-soft: rgb(232 185 130 / 10%);
   --color-on-primary: #101014;
   --color-analytics: var(--color-teal);
+  --color-on-analytics: #101014;
   --color-analytics-soft: rgb(85 197 183 / 10%);
   --color-analytics-border: rgb(85 197 183 / 30%);
   --color-border: rgb(245 245 245 / 10%);
@@ -99,7 +100,7 @@
   --z-dropdown: 30;
 }
 
-/* Optional light palette for screens that provide theme selection. */
+/* A single palette shared by authentication and every protected page. */
 :root[data-theme='light']:not(.dark) {
   color-scheme: light;
   --color-surface: #f5f4f1;
@@ -110,9 +111,12 @@
   --color-text: #202027;
   --color-text-soft: #61616c;
   --color-text-muted: #61616c;
+  --color-gold: #805120;
+  --color-teal: #21786e;
   --color-primary-strong: #805120;
   --color-primary-soft: rgb(128 81 32 / 7%);
   --color-analytics: #21786e;
+  --color-on-analytics: #ffffff;
   --color-analytics-soft: rgb(33 120 110 / 7%);
   --color-analytics-border: rgb(33 120 110 / 28%);
   --color-border: rgb(32 32 39 / 12%);

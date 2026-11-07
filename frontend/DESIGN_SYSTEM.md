@@ -23,10 +23,10 @@ The visual system preserves authentication and the existing data contracts.
 | `--color-teal` / `--color-analytics` | `#55C5B7` | Analytics and connection visuals |
 
 Use `--color-on-primary` for text on gold buttons, `--color-primary-strong`
-for action text, and `--color-analytics` for readable data labels. The optional
-light palette adjusts surfaces and foregrounds for contrast while retaining gold
-buttons. Authentication and the presentation dashboard use the requested dark
-palette consistently. Color tokens also expose Tailwind utilities.
+for action text, and `--color-analytics` for readable data labels. The light
+palette adjusts surfaces and accent text for contrast while retaining champagne
+buttons. Authentication, the dashboard, discovery, history, and settings share
+one palette. Dark remains the default. Color tokens also expose Tailwind utilities.
 
 ## Typography and rhythm
 
@@ -143,3 +143,35 @@ not provided. `paths: null` means unavailable; `paths: []` means no returned pat
 Fixture provenance anywhere in a result produces a prominent demonstration label.
 Production includes no demonstration records or test-fixture route. Suggestions
 remain unavailable because no suggestion service exists.
+
+## History, settings, and account profile
+
+Protected `/history` and `/settings` pages share `AccountPageLayout`, the existing
+header, typography, spacing, and navigation. The profile disclosure now links to
+the Account section in Settings. There was no standalone profile page; name and
+email remain sourced from the authenticated user returned by the existing auth
+API. Editing, password changes/resets, device history, and remote session
+revocation have no backend support and are labeled unavailable. Signing out
+clears the current tab's stored token using the existing behavior. Google,
+LinkedIn, and X remain unconfigured, with no simulated connection buttons.
+
+`SearchHistoryPage` reuses the dashboard's `RecentSearch` record type. Supplied
+records support company/person/title filtering, status filtering, recent/oldest
+sorting, and links that start a new discovery search for the recorded company.
+Unknown dates sort last in both directions. Empty, filtered-empty, loading,
+error/retry, timeout, and unavailable states remain distinct. Source order is not
+mutated; requests abort on unmount and ignore late responses. The service
+boundary in `src/services/history.ts` is explicitly unavailable until a history
+API is implemented; it makes no network requests and writes no fake browser-local
+search records. Demonstration snapshots receive a visible label.
+
+`ThemeProvider` supports Dark, Light, and System preferences via native radios in
+Settings. The choice persists in `localStorage` under `introfinder_theme` for this
+browser, across account changes and logout; it is not an account setting stored
+by the backend. The initial HTML applies the saved palette before first paint.
+System mode follows device changes, and storage events synchronize open tabs.
+Storage failures keep the selected appearance active and offer a save retry
+without claiming persistence succeeded. Authentication's photograph keeps its
+dark overlay and readable light text in either theme; the form follows the
+selected palette. `--color-on-analytics` provides readable text inside filled
+teal nodes in both palettes. All new motion respects reduced-motion preferences.

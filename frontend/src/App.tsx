@@ -5,6 +5,9 @@ import './styles/auth.css'
 import './styles/dashboard.css'
 import './styles/dashboard-refinements.css'
 import './styles/discovery.css'
+import './styles/account.css'
+import { SearchHistoryPage } from './components/account/SearchHistoryPage'
+import { SettingsPage } from './components/account/SettingsPage'
 import { FindIntroductionsPage } from './components/discovery/FindIntroductionsPage'
 import { DashboardHeader } from './components/dashboard/DashboardHeader'
 import { OverviewSection } from './components/dashboard/OverviewSection'
@@ -368,6 +371,8 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
             { href: '#activity', label: 'Recent searches' },
             { href: '#network-paths', label: 'Introduction opportunities' },
             { href: '#discover', label: 'Your next move' },
+            { href: '/history', label: 'Search history' },
+            { href: '/settings', label: 'Settings' },
           ]}
         />
         <main className="presentation-main" ref={dashboardRef}>
@@ -491,6 +496,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/history" element={<ProtectedRoute user={currentUser}><SearchHistoryPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute user={currentUser}><SettingsPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </BrowserRouter>

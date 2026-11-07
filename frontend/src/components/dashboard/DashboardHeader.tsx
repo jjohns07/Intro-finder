@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 type DashboardHeaderProps = {
   name: string
@@ -12,6 +12,7 @@ type DashboardHeaderProps = {
 }
 
 export function DashboardHeader({ name, email, logo, onLogout, links, brandHref = '#overview', context }: DashboardHeaderProps) {
+  const location = useLocation()
   const [openPanel, setOpenPanel] = useState<'profile' | 'navigation' | null>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLButtonElement>(null)
@@ -71,6 +72,7 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
             <span className="presentation-eyebrow">Your account</span>
             <strong>{name}</strong>
             <p>{email}</p>
+            <Link className="profile-account-link" to="/settings#account" onClick={() => setOpenPanel(null)}>Account & preferences <span aria-hidden="true">↗</span></Link>
             <button className="button button--secondary button--full" type="button" onClick={onLogout}>Logout</button>
           </section>
         )}
@@ -93,7 +95,7 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
           <nav className="presentation-popover presentation-navigation" id="dashboard-navigation" aria-label={context ? 'Main navigation' : 'Dashboard sections'}>
             <span className="presentation-eyebrow">{context ? 'Explore Intro Finder' : 'Explore your dashboard'}</span>
             {links.map((link, index) => (
-              <Link key={link.href} to={link.href} reloadDocument={link.href.includes('#')} onClick={() => setOpenPanel(null)}>
+              <Link key={link.href} to={link.href} aria-current={location.pathname === link.href ? 'page' : undefined} reloadDocument={link.href.includes('#')} onClick={() => setOpenPanel(null)}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 {link.label}
                 <span aria-hidden="true">↗</span>

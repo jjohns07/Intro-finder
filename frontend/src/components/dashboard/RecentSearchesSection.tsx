@@ -1,5 +1,6 @@
 import { CompanyMark } from './CompanyMark'
 import type { RecentSearch } from './data'
+import { Link } from 'react-router-dom'
 
 const statusLabels = { completed: 'Completed', pending: 'In progress', failed: 'Failed' }
 
@@ -16,7 +17,7 @@ export function RecentSearchesSection({ searches = null, onRevisit, onSearch }: 
   return <section className="presentation-activity recent-searches-section" id="activity" aria-labelledby="activity-heading" tabIndex={-1} data-reveal>
     <div className="presentation-activity-heading">
       <div><p className="presentation-eyebrow">05 / Recent searches</p><h2 id="activity-heading">Follow your curiosity.</h2></div>
-      <p>A record of the companies, people, and possibilities you have explored.</p>
+      <p>A record of the companies, people, and possibilities you have explored.<Link className="presentation-inline-action history-section-link" to="/history">View discovery history <span aria-hidden="true">↗</span></Link></p>
     </div>
     {searches?.length ? <ol className="recent-search-feed" aria-label="Recent company searches">
       {searches.map((search, index) => <li key={search.id} style={{ '--item-delay': `${Math.min(index, 5) * 65}ms` } as React.CSSProperties}>

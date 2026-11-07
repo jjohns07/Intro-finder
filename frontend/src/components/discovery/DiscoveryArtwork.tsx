@@ -11,14 +11,14 @@ export function DiscoveryArtwork() {
         <path d="m90 211 140-41 107-98" pathLength="1" />
         <path d="m230 170 113 92M137 58l93 112" opacity=".3" pathLength="1" />
       </g>
-      <g fill="#101014" stroke="currentColor">
+      <g fill="var(--color-surface)" stroke="currentColor">
         <circle cx="90" cy="211" r="9" /><circle cx="337" cy="72" r="9" />
         <circle cx="343" cy="262" r="5" /><circle cx="137" cy="58" r="5" />
         <circle cx="230" cy="170" r="26" />
       </g>
       <circle cx="230" cy="170" r="5" fill="currentColor" />
-      <circle cx="337" cy="72" r="18" stroke="#E8B982" opacity=".4" />
-      <path d="M374 45h27m-13.5-13.5v27" stroke="#E8B982" opacity=".5" />
+      <circle cx="337" cy="72" r="18" stroke="var(--color-gold)" opacity=".4" />
+      <path d="M374 45h27m-13.5-13.5v27" stroke="var(--color-gold)" opacity=".5" />
     </svg>
   )
 }

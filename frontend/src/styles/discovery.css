@@ -143,7 +143,7 @@
 
 @media (hover: hover) {
   .discovery-breadcrumb a:hover, .discovery-target a:hover, .discovery-profile-links a:hover { color: var(--color-gold); text-decoration: underline; text-underline-offset: 4px; }
-  .discovery-search-bar:hover:not(:focus-within):not([data-invalid='true']) { border-color: rgb(245 245 245 / 36%); }
+  .discovery-search-bar:hover:not(:focus-within):not([data-invalid='true']) { border-color: var(--color-text-muted); }
   .discovery-clear:hover { background: var(--color-surface-elevated); color: var(--color-text); }
   .discovery-submit:hover:not(:disabled) > span:last-child { transform: translate(2px, -2px); }
   .discovery-person:hover .discovery-portrait { transform: translateY(-2px); border-color: var(--color-teal); }
