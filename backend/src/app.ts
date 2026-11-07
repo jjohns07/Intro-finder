@@ -13,7 +13,9 @@ export function createApp(provider: DiscoveryProvider = createDiscoveryProvider(
   app.use('/api/auth', authRoutes)
   app.get('/api/health', (_req, res) => {
     res.json({ api: { status: 'ok', message: 'Intro Finder API is running', port: Number(process.env.PORT) || 5000 },
-      database: { status: getDatabaseStatus(), configured: Boolean(process.env.MONGODB_URI) } })
+      database: { status: getDatabaseStatus(), configured: Boolean(process.env.MONGODB_URI) },
+      discovery: { provider: provider.name, configured: provider.available,
+        verification: provider.verification ?? { status: 'not_run', companySearch: 'not_run', executiveEnrichment: 'not_run' } } })
   })
   // Do not queue history requests against a disconnected database or cache
   // one user's private results in a browser/proxy shared with another user.

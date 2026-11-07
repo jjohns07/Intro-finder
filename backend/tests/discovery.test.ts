@@ -10,6 +10,7 @@ import User from '../src/models/User'
 import type { DiscoveryProvider } from '../src/discovery/provider'
 import { ProviderError } from '../src/discovery/errors'
 import type { DiscoveryResult } from '../src/discovery/types'
+import { SkrappProvider } from '../src/discovery/providers/skrapp'
 
 let mongo: MongoMemoryServer, server: Server, base: string, token: string, otherToken: string
 let calls = 0
@@ -89,6 +90,64 @@ test('ambiguous matches persist without silently choosing a company', async () =
   assert.equal(record.outcome, 'ambiguous'); assert.equal(record.company, null); assert.equal(record.result, null)
   assert.equal(record.totalMatches, 9); assert.equal(record.matches.length, 2)
   assert.deepEqual((await (await get(`/api/history/${record.id}`)).json()).matches, record.matches)
+})
+
+test('a single relevance match is saved for explicit selection, not treated as an exact match', async () => {
+  run = async () => ({ matches: [sample], total: 1, matchMode: 'relevance' })
+  const response = await post('Related name', 'relevance-key')
+  assert.equal(response.status, 201)
+  const record = await response.json()
+  assert.equal(record.outcome, 'ambiguous')
+  assert.equal(record.result, null)
+  assert.equal(record.company, null)
+  const restored = await (await get('/api/history/' + record.id)).json()
+  assert.equal(restored.matchMode, 'relevance')
+  assert.equal(restored.matches[0].company.name, 'Test Company')
+})
+
+test('Skrapp projection survives the authenticated HTTP and MongoDB flow without leaking the key', async () => {
+  const fakeKey = 'integration-test-only-skrapp-key'
+  let upstreamCalls = 0
+  const skrapp = new SkrappProvider({ apiKey: fakeKey }, (async input => {
+    upstreamCalls++
+    return new Response(JSON.stringify(String(input).includes('/search?') ? {
+      results: [{ id: 'encoded', internal_id: '8342903258370330161', name: 'Example', domain: 'example.com', api_key: fakeKey }],
+      meta: { total_all: 1 },
+    } : {
+      id: '8342903258370330161', total_cost: 3,
+      categories: { headcount: { cost: 3, data: { key_executives: [{ member_full_name: 'Test Founder', member_position_title: 'Co-founder' }] } } },
+    }))
+  }) as typeof fetch)
+  const skrappServer = createApp(skrapp).listen(0, '127.0.0.1')
+  await new Promise<void>(resolve => skrappServer.once('listening', resolve))
+  const origin = 'http://127.0.0.1:' + (skrappServer.address() as { port: number }).port
+  try {
+    const health = await (await fetch(origin + '/api/health')).json()
+    assert.equal(health.discovery.provider, 'skrapp')
+    assert.equal(health.discovery.configured, true)
+    assert.equal(health.discovery.verification.status, 'not_run')
+    assert.equal(upstreamCalls, 0)
+    const request = () => fetch(origin + '/api/discovery/search', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'Idempotency-Key': 'skrapp-http-key' },
+      body: JSON.stringify({ companyName: 'Example' }),
+    })
+    const response = await request()
+    assert.equal(response.status, 201)
+    const record = await response.json()
+    assert.equal(record.outcome, 'success')
+    assert.equal(record.provenance.provider, 'skrapp')
+    assert.equal(record.matches[0].company.id, '8342903258370330161')
+    assert.equal(record.matches[0].people[0].role, 'founder')
+    assert.equal(JSON.stringify(record).includes(fakeKey), false)
+    assert.equal((await request()).status, 200)
+    assert.equal(upstreamCalls, 2)
+    const restored = await (await get('/api/history/' + record.id)).json()
+    assert.deepEqual(restored.matches, record.matches)
+    assert.equal((await get('/api/history/' + record.id, otherToken)).status, 404)
+  } finally {
+    skrappServer.closeAllConnections()
+    await new Promise<void>(resolve => skrappServer.close(() => resolve()))
+  }
 })
 
 test('no matches, invalid input, configuration, rate limits, access and provider failures are persisted distinctly', async () => {

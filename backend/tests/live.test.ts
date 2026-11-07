@@ -4,10 +4,14 @@ import dotenv from 'dotenv'
 import { createDiscoveryProvider } from '../src/discovery/provider'
 
 dotenv.config({ quiet: true })
-const provider = createDiscoveryProvider()
-test('LIVE PDL company search (consumes provider credits)', { skip: process.env.RUN_LIVE_DISCOVERY !== 'true' || !provider.available }, async () => {
-  const result = await provider.search('people data labs', { signal: AbortSignal.timeout(15_000) })
-  assert.ok(result.matches.length > 0)
-  assert.ok(result.matches.every(match => match.source === 'approved-source' && match.company.attribution?.provider === 'People Data Labs'))
-  assert.ok(result.matches.every(match => match.paths === null))
+test('LIVE Skrapp company search and executive enrichment (up to three credits)', { skip: process.env.RUN_LIVE_DISCOVERY !== 'true' }, async () => {
+  const provider = createDiscoveryProvider()
+  assert.equal(provider.name, 'skrapp', 'Select Skrapp before running its live test.')
+  assert.ok(provider.available, 'Skrapp credentials are missing from the backend environment.')
+  assert.ok(provider.verifyConnection, 'This provider has no live verification routine.')
+  const result = await provider.verifyConnection()
+  assert.equal(result.companySearch, 'passed', 'Live company search did not return the expected company.')
+  assert.equal(result.executiveEnrichment, 'passed', 'Live executive enrichment did not return usable candidates.')
+  assert.equal(result.status, 'passed')
+  assert.ok(result.executiveCount && result.executiveCount > 0)
 })

@@ -10,7 +10,7 @@ type SearchState =
   | { kind: 'idle' }
   | { kind: 'loading' | 'not-found' | 'unavailable' | 'pending'; query: string; message?: string }
   | { kind: 'error'; query: string; timedOut?: boolean; message?: string }
-  | { kind: 'success'; query: string; matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix' }
+  | { kind: 'success'; query: string; matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix' | 'relevance' }
 
 export function DiscoveryWorkspace({ initialCompany = '', service = companyDiscovery }: {
   initialCompany?: string

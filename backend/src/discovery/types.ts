@@ -1,4 +1,14 @@
+import type { ProviderFailure } from './errors'
+
 export type DataSourceKind = 'local-fixture' | 'approved-source' | 'disabled'
+export type CompanyMatchMode = 'exact' | 'prefix' | 'relevance'
+export interface DiscoveryVerification {
+  status: 'not_run' | 'running' | 'passed' | 'partial' | 'failed'
+  companySearch: 'not_run' | 'passed' | 'no_data' | 'not_configured' | ProviderFailure
+  executiveEnrichment: 'not_run' | 'passed' | 'no_data' | 'not_configured' | ProviderFailure
+  executiveCount?: number
+  checkedAt?: string
+}
 
 export type PersonRole =
   | 'founder'
@@ -62,7 +72,7 @@ export type PeopleStatus = 'available' | 'no_candidates' | 'not_configured' | 'r
 export interface DiscoverySearchResult {
   matches: DiscoveryResult[]
   total: number
-  matchMode: 'exact' | 'prefix'
+  matchMode: CompanyMatchMode
 }
 
 export interface Connection {

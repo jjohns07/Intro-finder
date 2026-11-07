@@ -3,7 +3,7 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth'
 import SearchHistory from '../models/SearchHistory'
 import type { DiscoveryProvider } from '../discovery/provider'
-import type { DiscoveryResult } from '../discovery/types'
+import type { CompanyMatchMode, DiscoveryResult } from '../discovery/types'
 import { ProviderError, providerError } from '../discovery/errors'
 import { validQuery } from '../discovery/validation'
 import { historyDetail, normalizeCompanyName, permittedSnapshot, settleInterruptedSearches } from '../services/history'
@@ -45,7 +45,7 @@ export function executeDiscovery(provider: DiscoveryProvider) {
 
     let matches: DiscoveryResult[] = []
     let totalMatches = 0
-    let matchMode: 'exact' | 'prefix' | undefined
+    let matchMode: CompanyMatchMode | undefined
     let retryAfterSeconds: number | undefined
     let outcome: Outcome = valid ? 'provider_unavailable' : 'invalid_query'
     let message = valid ? provider.configurationMessage ?? 'Company discovery is not configured. No provider search was performed.'
@@ -60,11 +60,11 @@ export function executeDiscovery(provider: DiscoveryProvider) {
         ])
         if (!Array.isArray(found.matches) || found.matches.length > 5 || !Number.isSafeInteger(found.total)
           || found.total < found.matches.length || (found.total > 0 && !found.matches.length)
-          || !['exact', 'prefix'].includes(found.matchMode)) throw new ProviderError('provider_error')
+          || !['exact', 'prefix', 'relevance'].includes(found.matchMode)) throw new ProviderError('provider_error')
         matches = found.matches.map(permittedSnapshot)
         totalMatches = found.total
         matchMode = found.matchMode
-        outcome = !totalMatches ? 'no_matches' : totalMatches > 1 || matchMode === 'prefix' ? 'ambiguous' : 'success'
+        outcome = !totalMatches ? 'no_matches' : totalMatches > 1 || matchMode !== 'exact' ? 'ambiguous' : 'success'
         message = !totalMatches ? 'No matching company was found in this source.'
           : outcome === 'ambiguous' ? 'Review the possible company matches. No company has been selected automatically.' : 'Company result saved.'
       } catch (error) {

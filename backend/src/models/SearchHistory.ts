@@ -34,7 +34,7 @@ const searchHistorySchema = new Schema({
   matches: { type: [Schema.Types.Mixed], default: [] },
   totalMatches: { type: Number, default: 0 },
   candidateCount: { type: Number, default: 0 },
-  matchMode: { type: String, enum: ['exact', 'prefix'] },
+  matchMode: { type: String, enum: ['exact', 'prefix', 'relevance'] },
   retryAfterSeconds: Number,
 }, { timestamps: true, bufferCommands: false })
 

@@ -4,16 +4,16 @@ import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { isDemonstration, safeWebUrl, type DiscoveryConnection, type DiscoveryPath, type DiscoveryPerson, type DiscoveryResult } from '../../services/discovery'
 
 export function DiscoveryMatches({ matches, total, matchMode, onNewSearch }: {
-  matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix'; onNewSearch: () => void
+  matches: readonly DiscoveryResult[]; total: number; matchMode?: 'exact' | 'prefix' | 'relevance'; onNewSearch: () => void
 }) {
-  const ambiguous = total > 1 || matchMode === 'prefix'
+  const ambiguous = total > 1 || matchMode === 'prefix' || matchMode === 'relevance'
   const [selected, setSelected] = useState<string | null>(ambiguous ? null : matches[0]?.company.id ?? null)
   const active = matches.find(match => match.company.id === selected)
   return <>
     {ambiguous && <section className="discovery-match-picker" aria-labelledby="company-matches-heading">
       <p className="presentation-eyebrow">Possible company matches</p>
       <h2 id="company-matches-heading">Which company did you mean?</h2>
-      <p>{matchMode === 'prefix' ? 'No exact name matched. These company names start with your search.' : 'Several companies share this name.'} Choose a company to review its people and sources.</p>
+      <p>{matchMode === 'prefix' ? 'No exact name matched. These company names start with your search.' : matchMode === 'relevance' ? 'The provider returned possible matches for your company name.' : 'Several companies share this name.'} Choose a company to review its people and sources.</p>
       {total > matches.length && <p>Showing {matches.length} of {total} matches. Use a more specific company name to narrow your search.</p>}
       <div className="discovery-match-options">{matches.map(({ company }) => <button type="button" key={company.id} aria-pressed={selected === company.id} onClick={() => setSelected(company.id)}>
         <strong>{company.name}</strong>

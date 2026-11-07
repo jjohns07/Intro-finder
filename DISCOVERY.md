@@ -1,116 +1,144 @@
-# Company and founder discovery
+# Company and executive discovery
 
-## Provider decision (7 November 2026)
+## Provider and API contract
 
-Selected **People Data Labs (PDL)**, accessed through its documented Company Search and Person Search APIs. The existing Express/Mongoose backend and React frontend need no additional runtime provider SDK: Node 22's `fetch` supports the API directly. Test dependencies are development-only.
+Skrapp is the default discovery provider. The adapter uses its documented REST API with the backend's `process.env.SKRAPP_API_KEY`, sent only in the `X-Access-Key` header to `https://api.skrapp.io`. Credentials are never returned, logged, committed, or placed in frontend configuration. The adapter's key is a JavaScript private field.
 
-PDL offers company profiles and professional employment histories with persistent company IDs, titles, dates, and sometimes contributing-source counts. These fields allow a candidate's role to be tied to a specific company, including historical employment. Coverage is limited to PDL's dataset, field bundles, and account entitlements. It is not an authoritative register of founders and does not cover every private or newly created company.
+The existing Express/Mongoose/React architecture remains in place:
 
-Wikidata was also considered: its structured data is CC0, public and free, but coverage of smaller private companies and professional employment histories is uneven. PDL is the better first adapter for this product's company/decision-maker search. No platform scraping, LinkedIn login, or X API is used. Profile URLs supplied by PDL are references only; the backend never fetches them.
+- `POST /api/discovery/search` requires the existing session JWT, an `Idempotency-Key` (8–128 letters, numbers, underscores or dashes), and JSON `{"companyName":"Example"}`.
+- The backend creates an account-owned history record before contacting the provider. Replays of the same execution key reuse that record and do not make another provider request.
+- `GET /api/history`, `GET /api/history/:id`, and `DELETE /api/history/:id` retain their existing ownership checks. Invalid queries and provider failures remain distinguishable saved outcomes.
+- Existing PDL searches and saved snapshots remain readable. No destructive database migration is required.
 
-**Access and pricing:** PDL requires an account and API key. Both Search APIs charge per returned record, not per request. At review, the public pricing page advertised a free testing tier of up to 100 credits/month and paid self-service starting at $98/month. Those advertisements do not establish Company Search or Person Search entitlement for this application. Confirm the endpoint/field entitlements, search credits, and applicable price in the account dashboard or agreement. No subscription or credentials were found in this workspace.
+A discovery execution makes these upstream requests:
 
-**Limits:** both Search API references document a default of 10 requests/minute. Actual limits are per key and endpoint, visible in response headers and the account dashboard. The adapter defaults to 10 per endpoint per rolling minute, honors `Retry-After` and `x-ratelimit-reset`, and stops when `x-ratelimit-remaining.minute` is zero. It does not retry automatically. A search retrieves at most five companies and five person records per company: up to five company and 25 person credits, one or two company requests, and up to five person requests. Duplicate executions with the same idempotency key do not spend more credits. Prefix fallback only runs after an exact-name search returns no results. Results are ordered by the provider's completeness, not an invented match score. No pagination or fuzzy name matching is implemented.
+1. `POST /api/v3/companies/search?size=5&start=0&lead_counts=false`, with `companyName` and `sort: "relevance"` in its JSON body.
+2. For each returned company, `GET /api/v3/companies/enrich?id=<internal_id>&categories=headcount`.
 
-**Permitted use:** PDL is licensed data, not an open-data grant. Its sourcing documentation describes public and proprietary sources and customer-use restrictions; this does not establish unrestricted redistribution rights. The operator must ensure their agreement permits Intro Finder's authenticated display and saved result snapshots, retention period, and handling of opt-outs. `PDL_ALLOW_RESULT_STORAGE=true` is an explicit deployment assertion of those rights, not a license grant. Until then the adapter makes no calls. The projection excludes email, telephone, addresses, arbitrary metadata and raw responses. The documented acceptable-use restrictions include eligibility decisions and sensitive/discriminatory profiling; this implementation performs professional company discovery only. Existing stored snapshots are not automatically synchronized with PDL deletion/opt-out feeds; any required retention/rights workflow must be arranged before enabling production storage.
+The adapter preserves Skrapp's numeric-string `internal_id` without converting it to a JavaScript number. The encoded `id` in search results is a different identifier and is not passed to enrichment. Explicitly requesting `headcount` avoids the API's default of requesting all enrichment categories.
 
-Reviewed references:
+Search results are bounded to five companies. A single company with an exact normalized name is an exact match; other results use `matchMode: "relevance"` and require the user to choose. Skrapp's relevance ranking is not described as prefix matching or as a confidence score. No pagination is implemented.
 
-- [Company Search reference](https://docs.peopledatalabs.com/docs/reference-company-search-api)
-- [Company query parameters](https://docs.peopledatalabs.com/docs/input-parameters-company-search-api)
-- [Person Search reference](https://docs.peopledatalabs.com/docs/reference-person-search-api)
-- [Person schema and employment fields](https://docs.peopledatalabs.com/docs/person-schema)
-- [Usage limits and response headers](https://docs.peopledatalabs.com/docs/usage-limits)
-- [Errors/status codes](https://docs.peopledatalabs.com/docs/errors)
-- [Pricing](https://www.peopledatalabs.com/pricing)
-- [Sources, compliance and permitted-use restrictions](https://docs.peopledatalabs.com/docs/data-sources)
-- [Acceptable-use policy](https://privacy.peopledatalabs.com/policies?name=acceptable-data-use-policy)
-- [Wikidata access and CC0 licensing](https://www.wikidata.org/wiki/Wikidata:Data_access)
+## Executive evidence and limitations
 
-## Render configuration
+The `headcount` category's `key_executives` array supplies names and titles. The adapter checks that the enrichment response's company ID matches the selected company, removes incomplete or duplicate rows, prioritizes explicit founder titles, and displays at most five candidates.
 
-On the **backend Render web service**, open **Environment** and set:
+A founder candidate requires an explicit founder/co-founder title segment. CEO, owner, founding engineer, and founder's associate titles do not establish founder status. Other returned executives are decision-maker candidates.
+
+Skrapp does not provide individual person IDs in this category. Candidate IDs are locally derived display-row identifiers scoped to the company, name and title. Evidence points to the company record and the executive-array entry. These IDs do not establish independent person identity. Current affiliation is reported by Skrapp; no employment dates, individual last-seen dates, source counts, or complete employment histories are invented.
+
+Skrapp advertises 40M+ companies, but company and executive coverage is not universal. Fields may be absent or outdated, and executive lists are not complete founder registers. Returned names and titles are provider-supported candidates, not independently verified facts.
+
+There is no relationship provider: `paths` is null, connections are empty, and connection status is unavailable. No mutual connections, trust scores, X-follow signals, contact emails or phone numbers are generated. LinkedIn URLs supplied by Skrapp are references; the backend does not fetch profile pages or use browser extensions, scraping, or platform credentials.
+
+## Credentials and Render configuration
+
+On the **backend Render web service**, open **Environment**. The provider key belongs only there:
 
 ```dotenv
-DISCOVERY_PROVIDER=pdl
-PDL_API_KEY=<your PDL secret API key>
-PDL_ALLOW_RESULT_STORAGE=true
-PDL_PERSON_SEARCH_ENABLED=true
-PDL_REQUESTS_PER_MINUTE=10
+DISCOVERY_PROVIDER=skrapp
+SKRAPP_API_KEY=<set the secret in Render's Environment UI>
 ```
 
-Set the storage flag only after confirming the rights above. Enable Person Search only when the key has that endpoint and sufficient credits; leave it `false` for company-only discovery. Never set these values as `VITE_*` variables or in frontend source. Keep the existing `MONGODB_URI`, `JWT_SECRET` (at least 32 characters), `JWT_EXPIRES_IN`, and Render `PORT` configuration. Use Node 22 or newer. Save and redeploy the backend. Backend build/start commands remain `npm ci && npm run build` and `npm start`, with `backend` as the root directory.
+An unset provider defaults to Skrapp. An old `DISCOVERY_PROVIDER=pdl` setting also selects Skrapp if the PDL key is absent and a Skrapp key has been supplied. If an actual PDL key remains configured, explicitly select `skrapp`. An explicitly selected PDL adapter otherwise retains its existing configuration and storage-permission gate.
 
-The frontend's `VITE_API_BASE_URL` must point to the backend's `/api` base (the existing Render URL remains the default). No provider key belongs on the frontend. Frontend build command: `npm ci && npm run build`, root directory `frontend`, publish directory `dist`.
+Optional settings and their defaults:
 
-The local limiter is per backend process. For multiple Render instances or a key shared with other applications, divide the rate allowance or replace it with a shared limiter before scaling. The provider's own 429 responses remain authoritative. No environment settings or Render deployment were changed by this implementation.
-
-## Endpoint and response
-
-`POST /api/discovery/search` uses the existing JWT middleware and requires a connected account database. It requires:
-
-```http
-Authorization: Bearer <session JWT>
-Idempotency-Key: <unique 8–128 character key; letters, digits, underscore or dash>
-Content-Type: application/json
-
-{"companyName":"People Data Labs"}
+```dotenv
+SKRAPP_EXECUTIVE_SEARCH_ENABLED=true
+SKRAPP_SEARCH_REQUESTS_PER_MINUTE=20
+SKRAPP_SEARCH_REQUESTS_PER_DAY=50
+SKRAPP_VERIFY_ON_STARTUP=true
 ```
 
-Company names are validated (2–160 characters, letter/number required, no control/format characters), Unicode NFKC normalized, whitespace collapsed and lowercased for provider lookup. The provider receives structured Elasticsearch term/prefix queries, never interpolated SQL. The request body is limited to 8 KB. User ownership, outcomes and result snapshots cannot be supplied by the client.
+Missing credentials are nonfatal during local development. Authenticated searches return a saved `provider_unavailable` outcome without contacting Skrapp. No fixture or synthetic production results are substituted. The backend's normal JWT and database configuration requirements still apply.
 
-The response is a saved-search object: `id`, `originalQuery`, `normalizedCompanyName`, `status`, `outcome`, `message`, `matches`, `totalMatches`, `matchMode`, `provenance`, and timestamps. Each match contains its company, people with evidence, `peopleStatus`, warnings, `connectionStatus: "unavailable"`, `paths: null` and empty connections. `result` remains populated for a single exact company for compatibility with earlier saved searches. For multiple or prefix matches, `result` and the summary `company` are null; the user must choose from `matches`. Selection is local to the saved response and creates no request or history record. Truncated company/person results are labeled.
+Use Node 22.13 or newer. Render root directory: `backend`; build: `npm ci && npm run build`; start: `npm start`. Keep the existing MongoDB and JWT settings. Save and deploy after changing environment values. The frontend continues using its existing API service; `VITE_API_BASE_URL` points to the backend's `/api` base. Never put a provider key in a `VITE_*` variable.
 
-| Outcome | HTTP on first execution | Meaning |
-| --- | --- | --- |
-| `success` | 201 | Single exact company; people may be absent or unavailable |
-| `ambiguous` | 201 | Multiple companies, or a prefix-only match requiring review |
-| `no_matches` | 201 | Completed query with no company matches in this source |
-| `invalid_query` | 400 | Invalid company input, recorded if the execution key is valid |
-| `provider_unavailable` | 503 | Missing provider/key or storage authorization configuration |
-| `rate_limited` | 429 | Local/provider request limit; includes `Retry-After` |
-| `provider_timeout` | 504 | Company lookup or overall execution timed out |
-| `provider_access_denied` | 503 | Provider credentials or endpoint entitlement rejected |
-| `quota_exceeded` | 503 | Provider credits exhausted |
-| `provider_error` | 502 | Network failure, provider failure or malformed response |
+## Real API verification on Render
 
-A completed duplicate returns 200 for completed searches or the same failure HTTP status, with the same saved record. An in-progress duplicate returns 202. Reusing a key with different input returns 409. JWT failures return 401; unavailable account/database services return 503. A delete racing with execution is never undone by the final write.
+After the backend starts on Render (`RENDER=true`), the configured Skrapp adapter runs a bounded verification unless `SKRAPP_VERIFY_ON_STARTUP=false`. It runs after the server begins listening and does not make startup depend on provider availability.
 
-All accepted authenticated execution attempts, including invalid company input and provider failures, have one Search History record. Client-side validation, unauthenticated requests, invalid/missing idempotency keys, malformed/oversized JSON, and database outages cannot create an executable discovery attempt. The backend does not call a provider if it cannot first create history. The browser reuses its key after uncertain network failures and creates a new key after a confirmed completed outcome. Clearing the UI does not cancel a server-side attempt already recorded; its final outcome remains in history.
+The check performs a real company search for Stripe, restricted to `stripe.com` with a page size of one, then requests that company's headcount enrichment. It uses the same adapter, authentication, response validation and executive projection as discovery. It does not access user accounts or save test searches to MongoDB.
 
-Existing `GET /api/history`, `GET /api/history/:id` and `DELETE /api/history/:id` continue to work, including restoring the new match arrays. Old single-result snapshots remain readable. New schema fields are additive; no destructive migration is needed. The existing unique `(user, requestId)` index is initialized at server startup.
+The probe uses one search request and at most three credits for that company's headcount category on first retrieval. Skrapp documents repeat category retrievals as free of additional credit charges; active endpoint access is still required.
 
-## Evidence and reliability
+`GET /api/health` includes a nonsecret report:
 
-A founder candidate needs an explicit `founder`/`co-founder` role segment and the exact PDL company ID on the same employment record (or matching current-job fields). Merely mentioning a company, a founder at a different employer, a derived `owner` level, or a “founder's associate” title does not qualify. Elasticsearch array matches are verified again entry by entry after retrieval.
+```json
+{
+  "discovery": {
+    "provider": "skrapp",
+    "configured": true,
+    "verification": {
+      "status": "not_run",
+      "companySearch": "not_run",
+      "executiveEnrichment": "not_run"
+    }
+  }
+}
+```
 
-Senior title levels can support a decision-maker candidate, but never prove founder status. Employment end dates indicate historical affiliation. A primary/current job field indicates current affiliation **as reported by PDL**; undated non-primary employment is marked unknown. Available start/end/last-seen dates and source counts are retained. All candidates carry the qualitative indicator `provider-supported`, with the evidence rule and a limitation: source documents were not independently checked and the data may be outdated. Source counts are provider claims, not probability scores or proof of independent corroboration.
+- `configured: true` means a key is present, not that an API call succeeded.
+- `status: "passed"` requires a valid real company response and usable executive candidates.
+- `partial` means company search succeeded but enrichment was denied, failed, disabled or returned no candidates.
+- `failed` means the company check could not be completed.
+- Completed reports include a timestamp, fixed status codes, and an executive count when available. They contain no credentials, upstream error text, company profiles or personal names.
+- Reading health never triggers a provider request. This is the last dedicated verification report for the current backend process.
 
-Each HTTP provider request is capped at four seconds; optional people lookup has a shared five-second budget. Overall execution is capped at 15 seconds; the browser timeout is 20 seconds. People timeouts/errors preserve company matches. Responses are bounded to 2 MB decompressed and validated before projection. Redirects are rejected so the API key cannot be forwarded to another host. Raw upstream errors are never sent to clients. URL fields allow only HTTP(S) without embedded credentials.
+To rerun verification from the backend's Render Shell, without copying the key:
 
-There is no relationship-data provider. No introduction paths, X-follow-derived trust, synthetic production companies, or fabricated people are generated. The existing introduction-path display contract is retained for a future relationship source.
+```sh
+npm run verify:discovery
+```
 
-## Verification
+This compiled CLI prints only the safe report and exits nonzero unless both checks pass. It runs in a separate process and does not overwrite the web service's startup report. An unavailable key or skipped test is not a live integration success. The development-only `npm run test:live` also runs the real check; when explicitly requested it fails on missing configuration rather than silently skipping.
+
+## Limits, pricing and permitted usage
+
+The API reference documents company search as zero-credit, with default limits of 20 requests/minute and 50/day on Free, or 100/minute and 2,000/day on paid plans. Search limits are enforced conservatively per backend process, including UTC daily limits. With multiple Render instances or a shared key, allocate the allowance across processes or use a shared limiter.
+
+Headcount enrichment costs three credits per company/category the first time the account retrieves it. A normal search can therefore consume up to 15 credits across five companies. Free-plan enrichment is limited to a 14-day trial. The API reference describes free-plan API access while the pricing page lists API Integration under Enterprise; account access and applicable pricing must be verified, not inferred from advertising or the presence of a key.
+
+The adapter honors company-search remaining-quota headers and `Retry-After`. It distinguishes access denial, exhausted credits, rate limits, timeouts and other provider failures. An enrichment failure keeps company results and stops further enrichment for that execution. It makes no automatic retries.
+
+Each HTTP request has a four-second timeout; all optional enrichment shares an eight-second budget. The existing controller caps the overall execution at 15 seconds and the browser at 20 seconds. Responses are limited to 2 MB after decompression, redirects are rejected, and only allowlisted fields are stored or sent to the browser. Raw provider responses and exceptions are never logged or returned.
+
+The application stores limited company/executive snapshots. The operator must ensure their Skrapp agreement permits display to application users, retention and any redistribution. An API key is not a license grant. Automated opt-out/deletion synchronization with the provider is not implemented; required retention and rights handling must be arranged operationally.
+
+## Verification and files
+
+Ordinary tests use explicitly fake responses and an isolated MongoDB test instance, never the configured production database. They do not consume Skrapp credits.
 
 ```sh
 cd backend
-npm ci
 npm test
 npm run build
 
 cd ../frontend
-npm ci
 npm test
 npm run lint
 npm run build
 ```
 
-Backend tests use Node's test runner and an ephemeral real MongoDB via `mongodb-memory-server` (MongoDB 7.0.24). The first run downloads the test binary into `/tmp/intro-finder-mongodb`; it never connects to a configured production database. HTTP integration tests exercise JWT protection, persistent outcomes, cross-account isolation, duplicate and concurrent execution keys, saved ambiguity and concurrent deletion. Adapter tests inject clearly labeled test responses for evidence, partial results, empty results, invalid configuration, rate limits, timeouts and malformed data. Frontend tests exercise DOM behavior with Vitest/jsdom, including authenticated requests, loading, errors, no results, ambiguous selection, source evidence, Strict Mode and retry identity.
+Backend tests cover the documented Skrapp request formats, lossless IDs, founder evidence, bounded projection, missing credentials, partial results, quotas, timeouts, malformed responses, safe verification reports, JWT protection, MongoDB persistence, replay prevention, and cross-account isolation. Frontend tests cover selecting a relevance match and restoring saved results.
 
-After configuring a real PDL account, run from `backend`:
+Primary files:
 
-```sh
-npm run test:live
-```
+- `backend/src/discovery/providers/skrapp.ts`: provider adapter, limits, projection and bounded API verification.
+- `backend/src/discovery/provider.ts`: provider selection and Render verification guard.
+- `backend/src/controllers/discoveryController.ts`: existing authenticated execution and saved outcomes.
+- `backend/src/app.ts`, `backend/src/index.ts`: safe health report and Render startup verification.
+- `backend/src/scripts/verifyDiscovery.ts`: operator CLI using the server environment.
+- `backend/tests/skrapp.test.ts`, `backend/tests/live.test.ts`: isolated adapter tests and explicitly enabled live checks.
 
-This explicitly enabled test searches `people data labs` using the real adapter and consumes credits (including optional person searches if enabled). It is skipped without a configured provider; ordinary `npm test` does not make paid provider calls. A skipped test is **not** a live success. This workspace currently has no PDL credentials, so live search and actual account coverage/entitlements remain unverified.
+References:
+
+- [Skrapp API, authentication and errors](https://skrapp.io/api)
+- [Company search and quotas](https://skrapp.io/api#company-search)
+- [Company enrichment](https://skrapp.io/api#company-enrich)
+- [Headcount executive fields](https://skrapp.io/api#cat-headcount)
+- [Pricing](https://skrapp.io/pricing)
+- [Terms](https://skrapp.io/terms)
+- [Render environment variables](https://render.com/docs/configure-environment-variables)

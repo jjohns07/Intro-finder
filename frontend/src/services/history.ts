@@ -14,7 +14,7 @@ export type SavedSearch = RecentSearch & {
   result: DiscoveryResult | null
   matches?: readonly DiscoveryResult[]
   totalMatches?: number
-  matchMode?: 'exact' | 'prefix'
+  matchMode?: 'exact' | 'prefix' | 'relevance'
   retryAfterSeconds?: number
 }
 

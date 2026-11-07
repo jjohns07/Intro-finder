@@ -108,6 +108,15 @@ it('restores a saved ambiguous result, and does not render unsafe profile links'
   expect(screen.queryByRole('link', { name: /View company profile/ })).toBeNull()
 })
 
+it('requires selection of a single relevance match without claiming a prefix or exact match', () => {
+  render(<DiscoveryMatches matches={[result]} total={1} matchMode="relevance" onNewSearch={() => {}} />)
+  expect(screen.getByText('Which company did you mean?')).toBeTruthy()
+  expect(screen.getByText(/The provider returned possible matches/)).toBeTruthy()
+  expect(screen.queryByText('Test Founder')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /^Example/ }))
+  expect(screen.getByText('Test Founder')).toBeTruthy()
+})
+
 it('sends JWT/idempotency header and retains history on HTTP 429', async () => {
   sessionStorage.setItem('introfinder_token', 'test-jwt')
   const response = saved({ status: 'failed', outcome: 'rate_limited', result: null, matches: [], message: 'Try later.' })
