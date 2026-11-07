@@ -1,8 +1,12 @@
 # Intro Finder visual system
 
 The existing React screens use shared CSS through their current class names.
-Global tokens live in `src/index.css`, reusable styles in
-`src/styles/design-system.css`, and page composition in `src/App.css`.
+Global tokens live in `src/index.css` and reusable styles in
+`src/styles/design-system.css`. Auth and presentation-dashboard composition live
+in `src/styles/auth.css` and `src/styles/dashboard.css`. The latest section and
+data-visualisation refinements extend those styles in
+`src/styles/dashboard-refinements.css`; shared legacy composition remains in
+`src/App.css`.
 The design system does not change routes, data, or authentication.
 
 ## Color roles
@@ -19,10 +23,10 @@ The design system does not change routes, data, or authentication.
 | `--color-teal` / `--color-analytics` | `#55C5B7` | Analytics and connection visuals |
 
 Use `--color-on-primary` for text on gold buttons, `--color-primary-strong`
-for action text, and `--color-analytics` for readable data labels. The existing
-light theme adjusts surfaces and foregrounds for contrast while retaining gold
-buttons. Dark is the CSS fallback; the app still respects the user's stored or
-system theme preference. Color tokens also expose Tailwind utilities.
+for action text, and `--color-analytics` for readable data labels. The optional
+light palette adjusts surfaces and foregrounds for contrast while retaining gold
+buttons. Authentication and the presentation dashboard use the requested dark
+palette consistently. Color tokens also expose Tailwind utilities.
 
 ## Typography and rhythm
 
@@ -71,3 +75,33 @@ Native details supplies disclosure behavior. Custom popovers must supply their
 own open state, dismissal, focus handling, and appropriate semantics. Dropdown
 surfaces are viewport-constrained and scrollable. Icon styles preserve SVG
 stroke/fill choices and multicolor artwork.
+
+## Presentation dashboard
+
+The dashboard uses a lightweight header with profile and navigation disclosures,
+followed by overview, company search, network activity, platform status, recent
+searches, introduction opportunities, and a closing discovery action. Components
+in `src/components/dashboard` share the existing tokens and use native SVG for
+diagrams and charts. Headings, paragraphs, bars, lines, and feed entries use
+distinct viewport-triggered animations. All respect reduced motion.
+
+Overview metrics accept nullable values; unavailable data displays an em dash.
+`AnimatedMetric` counts supplied numerical values once on entering the viewport,
+while assistive technology receives the final number immediately.
+
+The momentum chart accepts activity records, renders gaps for missing values,
+and supports line and search-bar views, 30/90-day controls, pointer/touch/keyboard
+tooltips, and a data table. When data is unavailable, it offers an explicitly
+labeled example preview. Example values never populate the account overview.
+
+Contracts in `src/components/dashboard/data.ts` distinguish unavailable data
+(`null`) from known empty results (`[]`) and genuine zeroes. Network distribution,
+platform connection counts, search metadata, and introduction panels render only
+supplied records. Introduction steps are derived from a complete ordered path;
+strength is shown only when supplied with a valid score and calculation
+explanation. The fallback path diagram is explicitly an illustration.
+
+The backend currently exposes authentication, with no dashboard/discovery data
+endpoints. LinkedIn and X are unavailable integrations. Company search retains
+its unavailable-service feedback; revisit and discovery actions focus the
+existing search field. Authentication and JWT handling remain unchanged.

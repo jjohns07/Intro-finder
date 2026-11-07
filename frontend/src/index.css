@@ -99,7 +99,7 @@
   --z-dropdown: 30;
 }
 
-/* The existing toggle continues to select and persist this light theme. */
+/* Optional light palette for screens that provide theme selection. */
 :root[data-theme='light']:not(.dark) {
   color-scheme: light;
   --color-surface: #f5f4f1;

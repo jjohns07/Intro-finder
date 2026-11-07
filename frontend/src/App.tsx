@@ -2,11 +2,20 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate,   Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import './styles/auth.css'
+import './styles/dashboard.css'
+import './styles/dashboard-refinements.css'
+import { DashboardHeader } from './components/dashboard/DashboardHeader'
+import { OverviewSection } from './components/dashboard/OverviewSection'
+import { ConnectionPathsSection } from './components/dashboard/ConnectionPathsSection'
+import { MomentumSection } from './components/dashboard/MomentumSection'
+import { useSectionReveal } from './components/dashboard/useSectionReveal'
+import { NetworkSection } from './components/dashboard/NetworkSection'
+import { RecentSearchesSection } from './components/dashboard/RecentSearchesSection'
+import { DiscoverySection } from './components/dashboard/DiscoverySection'
 import architecturePhoto from './assets/auth-entrance.jpg'
 import { AuthIcon, AuthInput, PasswordField } from './components/AuthFields'
 
 type AuthMode = 'login' | 'register'
-type ThemeMode = 'light' | 'dark'
 
 type User = {
   id: string
@@ -28,7 +37,6 @@ type StatusState = {
 
 const API_BASE_URL = 'https://intro-finder-api.onrender.com/api/auth'
 const TOKEN_STORAGE_KEY = 'introfinder_token'
-const THEME_STORAGE_KEY = 'intro-finder-theme'
 
 const getStoredToken = (): string | null => sessionStorage.getItem(TOKEN_STORAGE_KEY)
 
@@ -60,25 +68,6 @@ const initialFormState: AuthFormState = {
   confirmPassword: '',
 }
 
-function ThemeToggle({ theme, onToggle }: { theme: ThemeMode; onToggle: () => void }) {
-  const isDark = theme === 'dark'
-
-  return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={onToggle}
-      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-    >
-      <span className="theme-toggle-track" aria-hidden="true">
-        <span className="theme-toggle-thumb">{isDark ? '☾' : '☀'}</span>
-      </span>
-      <span className="theme-toggle-label">{isDark ? 'Dark' : 'Light'}</span>
-    </button>
-  )
-}
-
 function GoogleLogo() {
   return (
     <svg className="google-logo" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
@@ -103,81 +92,6 @@ function LogoMark({ compact = false }: { compact?: boolean }) {
   )
 }
 
-function TypewriterHeadline({
-  text,
-  as: Component = 'h1',
-  className = '',
-  once = true,
-}: {
-  text: string
-  as?: 'h1' | 'h2'
-  className?: string
-  once?: boolean
-}) {
-  const containerRef = useRef<HTMLHeadingElement | null>(null)
-  const hasStartedRef = useRef(false)
-  const [visible, setVisible] = useState(false)
-  const [displayedText, setDisplayedText] = useState('')
-
-  useEffect(() => {
-    const element = containerRef.current
-
-    if (!element || !once) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        if (entry?.isIntersecting) {
-          setVisible(true)
-          if (!hasStartedRef.current) {
-            hasStartedRef.current = true
-          }
-        }
-      },
-      { threshold: 0.3 },
-    )
-
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [once])
-
-  useEffect(() => {
-    if (!visible) {
-      return
-    }
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (prefersReducedMotion) {
-      setDisplayedText(text)
-      return
-    }
-
-    let index = 0
-    const timer = window.setInterval(() => {
-      index += 1
-      setDisplayedText(text.slice(0, index))
-
-      if (index >= text.length) {
-        window.clearInterval(timer)
-      }
-    }, 42)
-
-    return () => window.clearInterval(timer)
-  }, [text, visible])
-
-  const isComplete = displayedText.length >= text.length
-
-  return (
-    <Component ref={containerRef} className={className} aria-label={text}>
-      {displayedText}
-      {!isComplete && visible && <span className="typewriter-caret" aria-hidden="true" />}
-    </Component>
-  )
-}
-
 function AuthScreen({
   onAuthenticated,
 }: {
@@ -195,9 +109,17 @@ function AuthScreen({
   const [copyrightYear] = useState(() => new Date().getFullYear())
   const switchTimer = useRef<number | undefined>(undefined)
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const focusAfterSwitch = useRef(false)
   const isLogin = mode === 'login'
 
   useEffect(() => () => window.clearTimeout(switchTimer.current), [])
+
+  useEffect(() => {
+    if (focusAfterSwitch.current) {
+      headingRef.current?.focus({ preventScroll: true })
+      focusAfterSwitch.current = false
+    }
+  }, [mode])
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
@@ -210,6 +132,7 @@ function AuthScreen({
     if (isSubmitting || isSwitching || nextMode === mode) return
 
     const finishSwitch = () => {
+      focusAfterSwitch.current = true
       setMode(nextMode)
       setStatus(null)
       setErrors({})
@@ -217,7 +140,6 @@ function AuthScreen({
       setShowConfirmPassword(false)
       setFormData(initialFormState)
       setIsSwitching(false)
-      requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }))
     }
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -402,20 +324,12 @@ function ProtectedRoute({ user, children }: { user: User | null; children: React
   return <>{children}</>
 }
 
-function DashboardScreen({
-  user,
-  onLogout,
-  theme,
-  onToggleTheme,
-}: {
-  user: User
-  onLogout: () => void
-  theme: ThemeMode
-  onToggleTheme: () => void
-}) {
+function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void }) {
   const navigate = useNavigate()
+  const dashboardRef = useSectionReveal()
   const [companyName, setCompanyName] = useState('')
   const [searchMessage, setSearchMessage] = useState<{ type: 'error' | 'info'; text: string } | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const handleLogout = () => {
     clearStoredToken()
@@ -425,17 +339,11 @@ function DashboardScreen({
 
   const handleCompanySearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
-    const trimmedCompany = companyName.trim()
-
-    if (!trimmedCompany) {
-      setSearchMessage({
-        type: 'error',
-        text: 'Please enter a company name before searching.',
-      })
+    if (!companyName.trim()) {
+      setSearchMessage({ type: 'error', text: 'Please enter a company name before searching.' })
+      searchRef.current?.focus()
       return
     }
-
     setSearchMessage({
       type: 'info',
       text: 'Company discovery is not connected yet. Please try again once the search API is available.',
@@ -443,202 +351,82 @@ function DashboardScreen({
   }
 
   const focusCompanySearch = () => {
-    const input = document.getElementById('company-search') as HTMLInputElement | null
-
-    if (!input) {
-      return
-    }
-
-    input.focus()
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    searchRef.current?.focus({ preventScroll: true })
+    searchRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'center',
+    })
   }
 
-  const navItems = ['Dashboard', 'Find Introductions', 'Search History', 'Settings']
-
   return (
-    <div className="dashboard-shell">
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar" aria-label="Main navigation">
-          <div className="sidebar-brand">
-            <LogoMark compact />
-            <div className="brand-copy">
-              <strong>Intro Finder</strong>
+    <div className="presentation-dashboard">
+      <a className="presentation-skip-link" href="#overview">Skip to dashboard</a>
+      <div className="presentation-frame">
+        <DashboardHeader
+          name={user.name}
+          email={user.email}
+          logo={<LogoMark compact />}
+          onLogout={handleLogout}
+          links={[
+            { href: '#overview', label: 'Overview' },
+            { href: '#explore', label: 'Find introductions' },
+            { href: '#momentum', label: 'Network activity' },
+            { href: '#your-network', label: 'Your network' },
+            { href: '#activity', label: 'Recent searches' },
+            { href: '#network-paths', label: 'Introduction opportunities' },
+            { href: '#discover', label: 'Your next move' },
+          ]}
+        />
+        <main className="presentation-main" ref={dashboardRef}>
+          <OverviewSection />
+
+          <section className="presentation-explore" id="explore" aria-labelledby="explore-heading" tabIndex={-1} data-reveal>
+            <div className="presentation-explore-copy">
+              <p className="presentation-eyebrow">02 / Find introductions</p>
+              <h2 id="explore-heading">The right people.<br /><span>A warmer way in.</span></h2>
+              <p>Explore a company and discover how your network could bring you closer to the people behind it.</p>
             </div>
-          </div>
-
-          <nav className="sidebar-nav" aria-label="Sidebar navigation">
-            {navItems.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`nav-item ${item === 'Dashboard' ? 'active' : ''}`}
-                aria-current={item === 'Dashboard' ? 'page' : undefined}
-              >
-                {item}
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <div className="dashboard-content">
-          <header className="dashboard-topbar">
-            <div className="topbar-title-wrap">
-              <p className="topbar-kicker">Overview</p>
-              <h1>Dashboard</h1>
-            </div>
-
-            <div className="user-actions">
-              <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-              <div className="user-profile" aria-label="Current user profile">
-                <div className="user-avatar">{user.name.charAt(0).toUpperCase()}</div>
-                <div className="user-meta">
-                  <span>{user.name}</span>
-                  <small>{user.email}</small>
+            <div className="presentation-search-panel">
+              <form className="presentation-search-form" onSubmit={handleCompanySearch} noValidate>
+                <label htmlFor="company-search">Where would you like to go next?</label>
+                <div className="presentation-search-input">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+                  <input
+                    className="input"
+                    id="company-search"
+                    name="companyName"
+                    ref={searchRef}
+                    value={companyName}
+                    onChange={(event) => { setCompanyName(event.target.value); setSearchMessage(null) }}
+                    placeholder="Enter a company name"
+                    aria-label="Company name"
+                    aria-invalid={searchMessage?.type === 'error' || undefined}
+                    aria-describedby={searchMessage ? 'company-search-feedback' : 'company-search-note'}
+                  />
                 </div>
-              </div>
-
-              <button type="button" className="logout-button" onClick={handleLogout}>
-                Logout
-              </button>
-            </div>
-          </header>
-
-          <main className="dashboard-main">
-            <section className="dashboard-hero" aria-labelledby="dashboard-heading">
-              <span className="eyebrow eyebrow-light">Private network</span>
-              <TypewriterHeadline as="h2" className="dashboard-headline" text="Find warm paths to the right people" />
-              <p>
-                Discover potential introduction paths to company founders through your professional
-                connections, uncover trusted contacts, and move your outreach forward with greater
-                context.
-              </p>
-
-              <form className="company-search-form" onSubmit={handleCompanySearch} noValidate>
-                <label className="company-search-label" htmlFor="company-search">
-                  Company name
-                </label>
-
-                <div className="company-search-row">
-                  <div className="company-search-input-wrap">
-                    <svg
-                      className="company-search-icon"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z" />
-                    </svg>
-                    <input
-                      id="company-search"
-                      type="text"
-                      name="companyName"
-                      value={companyName}
-                      onChange={(event) => {
-                        setCompanyName(event.target.value)
-                        if (searchMessage) {
-                          setSearchMessage(null)
-                        }
-                      }}
-                      placeholder="Enter a company name..."
-                      aria-label="Company name"
-                      aria-invalid={searchMessage?.type === 'error'}
-                    />
-                  </div>
-
-                  <button type="submit" className="primary-search-button">
-                    <span>Find introductions</span>
-                  </button>
-                </div>
+                <button className="button button--primary presentation-primary-action" type="submit">Find introductions <span aria-hidden="true">↗</span></button>
               </form>
+              <p className="presentation-data-note" id="company-search-note">Company discovery is not connected yet.</p>
+              {searchMessage && <p id="company-search-feedback" className={`notice ${searchMessage.type === 'error' ? 'notice--error' : ''}`} role={searchMessage.type === 'error' ? 'alert' : 'status'}>{searchMessage.text}</p>}
+            </div>
+          </section>
 
-              {searchMessage && (
-                <p className={`search-status ${searchMessage.type}`} role="status" aria-live="polite">
-                  {searchMessage.text}
-                </p>
-              )}
-            </section>
+          <MomentumSection />
+          <NetworkSection />
+          <RecentSearchesSection onSearch={focusCompanySearch} onRevisit={(search) => {
+            setCompanyName(search.company.name)
+            setSearchMessage(null)
+            focusCompanySearch()
+          }} />
+          <ConnectionPathsSection onExplore={(company) => {
+            setCompanyName(company)
+            setSearchMessage(null)
+            focusCompanySearch()
+          }} />
+          <DiscoverySection onSearch={focusCompanySearch} />
 
-            <section className="dashboard-support-grid" aria-label="Dashboard support cards">
-              <article className="support-card">
-                <div className="card-header">
-                  <div className="card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                      <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="card-kicker">Search history</p>
-                    <h3>Recent activity</h3>
-                  </div>
-                </div>
-
-                <div className="empty-state">
-                  <div className="empty-state-illustration" aria-hidden="true">
-                    <span>⌕</span>
-                  </div>
-                  <p>No search history yet.</p>
-                  <small>Search for a company to see your recent lookups here.</small>
-                </div>
-
-                <button type="button" className="support-cta" onClick={focusCompanySearch}>
-                  Start a company search
-                </button>
-              </article>
-
-              <article className="support-card">
-                <div className="card-header">
-                  <div className="card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                      <path d="M7 4.75A2.75 2.75 0 0 1 9.75 2h4.5A2.75 2.75 0 0 1 17 4.75V6h1.5A2.5 2.5 0 0 1 21 8.5v10A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-10A2.5 2.5 0 0 1 5.5 6H7V4.75Zm2 1.25h6V6H9V6Zm-3.5 2.75v9.5c0 .28.22.5.5.5h13a.5.5 0 0 0 .5-.5v-9.5H5.5Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="card-kicker">Saved companies</p>
-                    <h3>Followed targets</h3>
-                  </div>
-                </div>
-
-                <div className="empty-state">
-                  <div className="empty-state-illustration" aria-hidden="true">
-                    <span>★</span>
-                  </div>
-                  <p>No saved companies yet.</p>
-                  <small>Save promising companies as you explore your network.</small>
-                </div>
-
-                <button type="button" className="support-cta subtle" onClick={focusCompanySearch}>
-                  Search for a company
-                </button>
-              </article>
-
-              <article className="support-card">
-                <div className="card-header">
-                  <div className="card-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                      <path d="M9.5 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm-4.5 8c.3-2.5 2.2-4.5 5.1-4.5s4.8 2 5.1 4.5H5Zm11.5-7.2a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4Zm3 7.4c-.2-1.9-1.5-3.4-3.8-4a3.8 3.8 0 0 0 .9-2.4A3.9 3.9 0 0 0 13 6.3 3.9 3.9 0 0 0 9.1 10a3.8 3.8 0 0 0 1 2.4c-2.3.6-3.6 2.1-3.8 4H3v1.5h18V19h-1.5Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="card-kicker">Introductions</p>
-                    <h3>Warm connections</h3>
-                  </div>
-                </div>
-
-                <div className="empty-state">
-                  <div className="empty-state-illustration" aria-hidden="true">
-                    <span>◎</span>
-                  </div>
-                  <p>No introductions yet.</p>
-                  <small>When a path opens up, your strongest opportunities will appear here.</small>
-                </div>
-
-                <button type="button" className="support-cta subtle" onClick={focusCompanySearch}>
-                  Find likely targets
-                </button>
-              </article>
-            </section>
-          </main>
-        </div>
+        </main>
+        <footer className="presentation-footer"><span>Intro Finder</span><p>Meaningful connections. New possibilities.</p><a href="#overview">Back to top ↑</a></footer>
       </div>
     </div>
   )
@@ -647,26 +435,6 @@ function DashboardScreen({
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') {
-      return 'light'
-    }
-
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-
-    if (storedTheme === 'light' || storedTheme === 'dark') {
-      return storedTheme
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  })
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
-  }, [theme])
-
   useEffect(() => {
     const token = getStoredToken()
 
@@ -694,10 +462,6 @@ function App() {
         setAuthReady(true)
       })
   }, [])
-
-  const handleThemeToggle = () => {
-    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
-  }
 
   if (!authReady) {
     return (
@@ -730,8 +494,6 @@ function App() {
               <DashboardScreen
                 user={currentUser!}
                 onLogout={() => setCurrentUser(null)}
-                theme={theme}
-                onToggleTheme={handleThemeToggle}
               />
             </ProtectedRoute>
           }

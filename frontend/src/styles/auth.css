@@ -1,5 +1,5 @@
-/* Authentication keeps the requested dark palette, independently of the
-   dashboard's stored theme. Typography, spacing and controls use global tokens. */
+/* Authentication uses the requested dark palette.
+   Typography, spacing and controls use global tokens. */
 .auth-experience {
   --color-surface: #101014;
   --color-surface-strong: #17171d;
