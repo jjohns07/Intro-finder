@@ -7,6 +7,9 @@ import './styles/dashboard-refinements.css'
 import './styles/discovery.css'
 import './styles/account.css'
 import './styles/motion.css'
+import './styles/project.css'
+import { AppFooter } from './components/AppFooter'
+import { AboutProjectPage } from './components/account/AboutProjectPage'
 import { PageTransition } from './components/motion/PageTransition'
 import { SearchHistoryPage } from './components/account/SearchHistoryPage'
 import { SettingsPage } from './components/account/SettingsPage'
@@ -88,8 +91,8 @@ function GoogleLogo() {
 
 function LogoMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`brand-mark ${compact ? 'compact' : ''}`} aria-label="Intro Finder logo">
-      <svg viewBox="0 0 52 52" role="img" aria-hidden="true" focusable="false">
+    <div className={`brand-mark ${compact ? 'compact' : ''}`} aria-hidden="true">
+      <svg viewBox="0 0 52 52" focusable="false">
         <circle cx="19" cy="25" r="8.5" fill="none" stroke="currentColor" strokeWidth="2.8" />
         <path d="M27.4 22.9c3.5 0 6.6 2.8 7 6.3l1.7 8.1c.2 1.6-1 3-2.6 3H18.5c-1.6 0-2.8-1.4-2.6-3l1.7-8.1c.4-3.5 3.5-6.3 7-6.3Z" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
         <path d="M30.5 12.5a6 6 0 0 1 8.2 8.3M38.5 15l-8 8.3" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
@@ -120,6 +123,12 @@ function AuthScreen({
   const isLogin = mode === 'login'
 
   useEffect(() => () => window.clearTimeout(switchTimer.current), [])
+
+  useEffect(() => {
+    const previousTitle = document.title
+    document.title = `${isLogin ? 'Login' : 'Create Account'} · Intro Finder`
+    return () => { document.title = previousTitle }
+  }, [isLogin])
 
   useEffect(() => {
     if (focusAfterSwitch.current) {
@@ -231,6 +240,7 @@ function AuthScreen({
 
   return (
     <div className="auth-experience">
+      <a className="presentation-skip-link" href="#auth-content">Skip to {isLogin ? 'login' : 'registration'}</a>
       <aside className="auth-visual" aria-label="Welcome to Intro Finder">
         <img className="auth-architecture" src={architecturePhoto} alt="" width="1600" height="1067" fetchPriority="high" />
         <div className="auth-visual-overlay" />
@@ -256,7 +266,7 @@ function AuthScreen({
         </div>
       </aside>
 
-      <main className="auth-stage">
+      <main className="auth-stage" id="auth-content" tabIndex={-1}>
         <section className="auth-entry-card" data-mode={mode} aria-labelledby="auth-title">
           <div key={mode} className={`auth-card-body ${isSwitching ? 'is-switching' : ''}`}>
             <div className="auth-card-emblem"><LogoMark /></div>
@@ -319,6 +329,7 @@ function AuthScreen({
           </div>
         </section>
       </main>
+      <AppFooter compact />
     </div>
   )
 }
@@ -337,6 +348,12 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
   const [companyName, setCompanyName] = useState('')
   const [searchMessage, setSearchMessage] = useState<{ type: 'error' | 'info'; text: string } | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const previousTitle = document.title
+    document.title = 'Dashboard · Intro Finder'
+    return () => { document.title = previousTitle }
+  }, [])
 
   const handleLogout = () => {
     clearStoredToken()
@@ -418,7 +435,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
           <DiscoverySection onSearch={() => openCompanySearch()} />
 
         </main>
-        <footer className="presentation-footer"><span>Intro Finder</span><p>Meaningful connections. New possibilities.</p><a href="#overview">Back to top ↑</a></footer>
+        <AppFooter backToTop="#overview" />
       </div>
     </div>
   )
@@ -426,14 +443,11 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [authReady, setAuthReady] = useState(false)
+  const [authReady, setAuthReady] = useState(() => !getStoredToken())
   useEffect(() => {
     const token = getStoredToken()
 
-    if (!token) {
-      setAuthReady(true)
-      return
-    }
+    if (!token) return
 
     fetch(`${API_BASE_URL}/me`, {
       headers: getAuthHeaders(token),
@@ -459,7 +473,7 @@ function App() {
     return (
       <div className="auth-shell">
         <div className="auth-card auth-loading-card">
-          <div className="loading-state">Checking your session...</div>
+          <div className="loading-state" role="status">Checking your session...</div>
         </div>
       </div>
     )
@@ -470,6 +484,7 @@ function App() {
       <PageTransition>
       <Routes>
         <Route path="/" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
+        <Route path="/about" element={<AboutProjectPage user={currentUser} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} />} />
         <Route
           path="/login"
           element={

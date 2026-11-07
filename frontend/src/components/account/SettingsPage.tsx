@@ -46,6 +46,7 @@ export function SettingsPage(props: AccountPageProps) {
         <div className="settings-security-content"><div className="settings-session"><div><span className="account-signed-in"><i aria-hidden="true" /> Current session</span><h3>You’re signed in here.</h3><p>Sign out of Intro Finder in this browser tab.</p></div><button className="button button--secondary" type="button" onClick={onLogout}>Sign out <span aria-hidden="true">↗</span></button></div><div className="settings-security-notes"><div><h3>Password</h3><p>Password changes and resets are not available yet.</p></div><div><h3>Other sessions</h3><p>Device history and signing out of other sessions are not available.</p></div></div></div>
       </section>
       <div className="settings-closing"><p>All set for your next connection.</p><Link className="presentation-inline-action" to="/find-introductions">Keep exploring <span aria-hidden="true">↗</span></Link></div>
+      <div className="settings-project-note"><p>Intro Finder · SIWES Industrial Training Project</p><Link className="presentation-inline-action" to="/about">About This Project <span aria-hidden="true">↗</span></Link></div>
     </main>
   </AccountPageLayout>
 }

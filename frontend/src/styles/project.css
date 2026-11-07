@@ -1,0 +1,47 @@
+/* Shared attribution stays secondary to the product on every screen. */
+.app-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-5) var(--space-8); padding-block: var(--space-8); border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: var(--text-metadata); line-height: 1.8; }
+.app-footer p { margin: 0; }
+.app-footer-brand > span { display: block; margin-bottom: var(--space-1); color: var(--color-text); font-weight: 500; font-size: var(--text-label); }
+.app-footer-links { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-6); }
+.app-footer-links a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.75rem; color: inherit; text-decoration: none; text-underline-offset: 4px; transition: color var(--motion-fast) ease; }
+.app-footer-credit { grid-column: 1 / -1; display: grid; gap: var(--space-1); }
+.app-footer--compact { grid-column: 2; width: min(100%, 35rem); justify-self: center; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); padding: var(--space-4) var(--space-8) var(--space-6); border: 0; text-align: center; }
+.app-footer--compact .app-footer-links { justify-content: center; }
+.auth-experience { grid-template-rows: 1fr auto; }
+.auth-visual { grid-row: 1 / 3; }
+.auth-experience > .app-footer { grid-row: 2; }
+
+.about-main h2 { font-weight: 450; letter-spacing: var(--tracking-heading); line-height: 1.15; }
+.about-introduction { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(2rem, 6vw, 6rem); padding: clamp(1.5rem, 4vw, 3.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-raised); box-shadow: var(--shadow-panel); }
+.about-introduction h2 { margin: var(--space-5) 0; font-size: clamp(2rem, 3.5vw, 3rem); }
+.about-introduction > div > p:last-child { margin: 0; color: var(--color-text-muted); font-size: var(--text-supporting); line-height: 1.8; }
+.about-facts, .about-technologies { display: grid; gap: var(--space-5); margin: 0; }
+.about-facts > div + div, .about-technologies > div + div { padding-top: var(--space-5); border-top: 1px solid var(--color-border); }
+.about-facts dt, .about-technologies dt { color: var(--color-text-muted); font-size: var(--text-metadata); }
+.about-facts dd, .about-technologies dd { margin: var(--space-2) 0 0; font-size: var(--text-supporting); line-height: 1.7; }
+.about-objectives ol { margin: 0; padding-left: var(--space-6); list-style: decimal; }
+.about-objectives li { padding-left: var(--space-3); }
+.about-objectives li + li { margin-top: var(--space-8); }
+.about-objectives li::marker { color: var(--color-teal); font-size: var(--text-label); }
+.about-objectives h3, .about-feature-list h3 { margin: 0 0 var(--space-2); font-size: var(--text-body); font-weight: 500; }
+.about-objectives li p, .about-feature-list p { margin: 0; color: var(--color-text-muted); font-size: var(--text-supporting); line-height: 1.8; }
+.about-feature-list { display: grid; gap: var(--space-6); }
+.about-feature-list .about-availability { padding: var(--space-5); border-left: 2px solid var(--color-gold); background: var(--color-primary-soft); font-size: var(--text-label); }
+.about-recognition { max-width: 65ch; padding-block: var(--space-10); }
+.about-recognition > p:last-child { margin-bottom: 0; color: var(--color-text-muted); font-size: var(--text-supporting); line-height: 1.8; }
+.about-login-link { display: inline-flex; align-items: center; gap: var(--space-3); min-height: 2.75rem; margin-left: auto; color: var(--color-gold); text-decoration: none; font-size: var(--text-label); }
+.settings-project-note { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4); padding-block: var(--space-6); border-top: 1px solid var(--color-border); }
+.settings-project-note p { margin: 0; color: var(--color-text-muted); font-size: var(--text-label); }
+.settings-project-note a { min-height: 2.75rem; }
+@media (hover: hover) {
+  .app-footer-links a:hover, .about-login-link:hover { color: var(--color-gold); text-decoration: underline; }
+}
+@media (max-width: 760px) {
+  .app-footer { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .about-introduction { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .auth-experience { grid-template-rows: auto 1fr auto; }
+  .auth-visual { grid-row: 1; }
+  .auth-experience > .app-footer { grid-column: 1; grid-row: 3; }
+}

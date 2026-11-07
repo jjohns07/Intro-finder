@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 
 export function PageTransition({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const rootRef = useRef<HTMLDivElement>(null)
   const previousPath = useRef(pathname)
 
@@ -10,6 +10,16 @@ export function PageTransition({ children }: { children: ReactNode }) {
     if (previousPath.current === pathname) return
     previousPath.current = pathname
     const element = rootRef.current
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      // Give keyboard and screen-reader users a predictable starting point
+      // after client-side navigation. In-page links retain their own target.
+      const heading = element?.querySelector('h1')
+      if (heading) {
+        heading.tabIndex = -1
+        heading.focus({ preventScroll: true })
+      }
+    }
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (motion.matches || !element?.animate) return
     let animation: Animation | undefined
@@ -23,7 +33,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
     const finish = () => { if (motion.matches) animation?.cancel() }
     motion.addEventListener('change', finish)
     return () => { animation?.cancel(); motion.removeEventListener('change', finish) }
-  }, [pathname])
+  }, [pathname, hash])
 
   return <div ref={rootRef} className="motion-route">{children}</div>
 }

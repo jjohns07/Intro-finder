@@ -39,5 +39,5 @@ export function AnimatedMetric({ value }: { value: number }) {
     return () => { observer.disconnect(); cancelAnimationFrame(frame); motion.removeEventListener('change', onMotionChange); document.removeEventListener('visibilitychange', onVisibilityChange) }
   }, [value, formatted])
 
-  return <span className="motion-metric" aria-label={formatted}><span className="motion-metric-size" aria-hidden="true">{formatted}</span><span aria-hidden="true" ref={valueRef}>{formatted}</span></span>
+  return <span className="motion-metric"><span className="sr-only">{formatted}</span><span className="motion-metric-size" aria-hidden="true">{formatted}</span><span aria-hidden="true" ref={valueRef}>{formatted}</span></span>
 }

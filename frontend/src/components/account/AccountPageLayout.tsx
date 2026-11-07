@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { DashboardHeader } from '../dashboard/DashboardHeader'
+import { AppFooter } from '../AppFooter'
 
 const accountNavigation = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -36,9 +37,9 @@ export function AccountPageLayout({ user, logo, onLogout, title, children }: Acc
     <a className="presentation-skip-link" href="#account-page-content">Skip to {title.toLowerCase()}</a>
     <div className="presentation-frame">
       <DashboardHeader name={user.name} email={user.email} logo={logo} onLogout={onLogout} brandHref="/dashboard" context={title} links={accountNavigation} />
-      <div className="account-breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Intro Finder / {title}</span></div>
+      <nav className="account-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Intro Finder / {title}</span></nav>
       {children}
-      <footer className="presentation-footer"><span>Intro Finder</span><p>Meaningful connections. New possibilities.</p><a href="#account-page-content">Back to top ↑</a></footer>
+      <AppFooter backToTop="#account-page-content" />
     </div>
   </div>
 }

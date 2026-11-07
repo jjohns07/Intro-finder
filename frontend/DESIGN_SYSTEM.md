@@ -211,3 +211,36 @@ use restrained transitions. No animation library was added. Resting CSS always
 shows the complete content, including if Web Animations is unavailable. There are
 currently no pie charts, modal dialogs, or standalone profile route; this pass
 animates existing components rather than adding new layouts or data displays.
+
+## Project recognition and application polish
+
+The public `/about` route explains Intro Finder's purpose, objectives, implemented
+features and technology stack, verified against the frontend and backend code.
+It identifies John Daodu as the developer and the project as a SIWES Industrial
+Training Project under the Student Industrial Work Experience Scheme (SIWES).
+It does not assert official sponsorship or name an institution, supervisor,
+internship organisation or project dates. Unavailable discovery, history and
+social integrations are distinguished from working account functionality.
+
+`AppFooter` provides the same understated attribution on login, signup, dashboard,
+discovery, history, Settings and About: “Designed & Developed by John Daodu” and
+“An independent software development project completed as part of SIWES.” The
+compact authentication variant stays below the form. Footer and Settings links
+open About without requiring login; signed-in visitors retain their account menu.
+
+Authentication includes a skip link, and each page has a descriptive document
+title. Client-side route changes move focus to the incoming heading immediately;
+hash navigation keeps its section target. Breadcrumbs are labelled navigation
+landmarks. Decorative logos do not duplicate the wordmark for screen readers;
+animated statistics expose a stable text value separately from the visual counter.
+Mobile auth inputs use 16px text to avoid unwanted input zoom. Supporting labels
+use the shared metadata scale, mobile chart table headings wrap, search control
+boundaries use the accessible control-border token, and light-theme teal is
+darkened for contrast on tinted panels. Existing reduced-motion support remains.
+
+Verification includes production build and lint, Chromium layouts at 320, 390,
+640, 768, 1024 and 1440px, enlarged text, long account details, keyboard navigation,
+chart details, both palettes, and automated axe accessibility checks. Login,
+registration, JWT storage/restoration, errors and logout are regression-tested
+with intercepted API responses; no live account or network relationships are
+created. No project dependencies or backend services were changed.

@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { DashboardHeader } from '../dashboard/DashboardHeader'
 import { DiscoveryWorkspace } from './DiscoveryWorkspace'
+import { AppFooter } from '../AppFooter'
 
 export function FindIntroductionsPage({ user, logo, onLogout }: {
   user: { name: string; email: string }
@@ -27,9 +28,9 @@ export function FindIntroductionsPage({ user, logo, onLogout }: {
         { href: '/history', label: 'Search history' },
         { href: '/settings', label: 'Settings' },
       ]} />
-      <div className="discovery-breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Discovery / Company search</span></div>
+      <nav className="discovery-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Discovery / Company search</span></nav>
       <DiscoveryWorkspace key={location.key} initialCompany={initialCompany} />
-      <footer className="presentation-footer"><span>Intro Finder</span><p>Meaningful connections. New possibilities.</p><a href="#find-introductions">Back to top ↑</a></footer>
+      <AppFooter backToTop="#find-introductions" />
     </div>
   </div>
 }

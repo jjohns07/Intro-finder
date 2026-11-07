@@ -109,7 +109,7 @@
 }
 
 .auth-copyright {
-  font-size: 0.6875rem;
+  font-size: var(--text-metadata);
   color: #aaa9b0;
   animation: auth-rise-in 600ms var(--auth-ease) 300ms backwards;
 }
@@ -351,7 +351,7 @@
 }
 
 .auth-experience .divider span {
-  font-size: 0.6875rem;
+  font-size: var(--text-metadata);
   font-weight: 400;
   letter-spacing: 0.025em;
   text-transform: none;
@@ -375,7 +375,7 @@
   margin: var(--space-2) 0 0;
   text-align: center;
   color: var(--color-text-muted);
-  font-size: 0.6875rem;
+  font-size: var(--text-metadata);
 }
 
 .auth-experience .auth-switch {
@@ -455,7 +455,7 @@
   .auth-welcome-rule { display: none; }
   .auth-welcome h2 { font-size: 2rem; }
   .auth-welcome p { max-width: 36ch; margin-top: var(--space-1); font-size: var(--text-label); }
-  .auth-copyright { font-size: 0.625rem; }
+  .auth-experience .auth-form input { font-size: 1rem; }
   .auth-stage { padding: var(--space-6) var(--space-4) var(--space-8); }
   .auth-entry-card { padding: var(--space-6); border-radius: var(--radius-lg); }
   .auth-card-emblem { margin-bottom: var(--space-4); }

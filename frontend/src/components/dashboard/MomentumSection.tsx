@@ -84,7 +84,7 @@ export function MomentumSection({ data = null }: { data?: ActivityData | null })
           <button type="button" aria-pressed={view === 'searches'} onClick={() => { setView('searches'); setSelectedIndex(null) }}>Company searches</button>
         </div>
         <div className="presentation-chart-toolbar">
-          <div className="presentation-chart-legend" aria-label="Chart series">{view === 'activity' ? <><span><i className="legend-connections" /> Connections</span><span><i className="legend-opportunities" /> Introduction opportunities</span></> : <span><i className="legend-connections" /> Company searches</span>}</div>
+          <div className="presentation-chart-legend" role="group" aria-label="Chart series">{view === 'activity' ? <><span><i className="legend-connections" /> Connections</span><span><i className="legend-opportunities" /> Introduction opportunities</span></> : <span><i className="legend-connections" /> Company searches</span>}</div>
           <div className="presentation-period-control" role="group" aria-label="Activity period">
             {(['30', '90'] as const).map((value) => <button key={value} type="button" aria-pressed={period === value} onClick={() => { setPeriod(value); setSelectedIndex(null) }}>{value} days</button>)}
           </div>

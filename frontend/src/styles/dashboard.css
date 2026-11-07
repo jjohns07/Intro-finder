@@ -381,12 +381,6 @@
 .presentation-activity-line p { margin: 0; color: var(--color-text-muted); font-size: var(--text-label); }
 .presentation-activity-line button { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-5); min-height: 2.75rem; padding: var(--space-2) 0; border: 0; background: transparent; color: var(--color-gold); font-size: var(--text-label); text-align: left; }
 .presentation-activity-line button:hover { text-decoration: underline; text-underline-offset: 4px; }
-
-.presentation-footer { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4) var(--space-8); padding-block: var(--space-8); border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: var(--text-metadata); }
-.presentation-footer > span { color: var(--color-text); font-weight: 500; }
-.presentation-footer p { margin: 0; }
-.presentation-footer a { margin-left: auto; padding-block: var(--space-3); color: var(--color-text-muted); text-decoration: none; }
-
 .presentation-paths {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
@@ -542,14 +536,13 @@
   .presentation-chart { grid-template-rows: 18rem auto; grid-template-columns: 1rem minmax(0, 1fr); }
   .presentation-chart-empty { padding-inline: var(--space-2); }
   .presentation-chart-empty strong { font-size: var(--text-supporting); }
-  .presentation-chart-labels { font-size: 0.625rem; }
-  .presentation-chart-table :is(td, th) { padding-inline: var(--space-1); font-size: 0.6875rem; }
+  .presentation-chart-labels { font-size: var(--text-metadata); }
+  .presentation-chart-table :is(td, th) { padding-inline: var(--space-1); font-size: var(--text-metadata); overflow-wrap: anywhere; }
   .presentation-explore { grid-template-columns: minmax(0, 1fr); padding-inline: 0; }
   .presentation-activity-heading { flex-direction: column; align-items: start; gap: var(--space-5); }
   .presentation-activity-heading > p { max-width: 40ch; }
   .presentation-activity-line { grid-template-columns: 1.5rem minmax(0, 1fr); }
   .presentation-activity-line p { grid-column: 2; }
-  .presentation-footer p { order: 1; width: 100%; }
   .presentation-header { min-height: 6rem; gap: var(--space-3); }
   .presentation-greeting { display: none; }
   .presentation-greeting + .presentation-header-controls { margin-left: auto; }

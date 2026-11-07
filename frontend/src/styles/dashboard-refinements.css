@@ -16,7 +16,7 @@
 .chart-crosshair { fill: none; stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 3 5; }
 .chart-tooltip { position: absolute; z-index: 2; top: var(--space-3); width: min(11rem, 100%); padding: var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface-elevated); box-shadow: var(--shadow-panel); font-size: var(--text-metadata); }
 .chart-tooltip > strong { display: block; color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
-.chart-tooltip > small { display: block; margin-top: var(--space-1); color: var(--color-gold); font-size: 0.625rem; }
+.chart-tooltip > small { display: block; margin-top: var(--space-1); color: var(--color-gold); font-size: var(--text-metadata); }
 .chart-tooltip dl { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
 .chart-tooltip dl > div { display: flex; justify-content: space-between; gap: var(--space-3); }
 .chart-tooltip dt { color: var(--color-text-muted); }

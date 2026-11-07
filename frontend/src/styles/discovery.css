@@ -18,7 +18,7 @@
 
 .discovery-search { position: relative; z-index: 1; padding: clamp(1.25rem, 2.5vw, 2.25rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-raised); box-shadow: 0 12px 48px rgb(0 0 0 / 12%); animation: discovery-enter 600ms var(--ease-standard) 160ms backwards; }
 .discovery-search label { display: block; margin-bottom: var(--space-4); color: var(--color-text); font-size: var(--text-label); font-weight: 500; }
-.discovery-search-bar { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface-strong); transition: border-color 180ms ease, box-shadow 180ms ease; }
+.discovery-search-bar { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border: 1px solid var(--color-control-border); border-radius: var(--radius-md); background: var(--color-surface-strong); transition: border-color 180ms ease, box-shadow 180ms ease; }
 .discovery-search-bar:focus-within { border-color: var(--color-gold); box-shadow: 0 0 0 4px rgb(232 185 130 / 9%); }
 .discovery-search-bar[data-invalid='true'] { border-color: var(--color-error); box-shadow: 0 0 0 3px var(--color-error-soft); }
 .discovery-search-field { display: flex; align-items: center; gap: var(--space-4); flex: 1; min-width: 0; padding-left: var(--space-4); }
@@ -30,7 +30,7 @@
 .discovery-clear { display: grid; place-items: center; width: 2.75rem; min-width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-muted); transition: background-color 180ms ease, color 180ms ease; }
 .discovery-submit { gap: var(--space-6); min-height: 3.5rem; padding-inline: var(--space-6); border-radius: var(--radius-sm); font-size: var(--text-label); white-space: nowrap; }
 .discovery-submit > span:last-child { transition: transform 180ms ease; }
-.discovery-search-meta { display: flex; justify-content: space-between; gap: var(--space-5); margin-top: var(--space-4); color: var(--color-text-muted); font-size: .6875rem; }
+.discovery-search-meta { display: flex; justify-content: space-between; gap: var(--space-5); margin-top: var(--space-4); color: var(--color-text-muted); font-size: var(--text-metadata); }
 .discovery-search-meta p { margin: 0; }
 .discovery-search-meta > span { flex-shrink: 0; }
 .discovery-search-meta > span > span { padding-right: var(--space-2); }
