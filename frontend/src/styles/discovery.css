@@ -78,6 +78,44 @@
 .discovery-company-identity h2 { margin: 0; font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.1; font-weight: 450; letter-spacing: -.04em; }
 .discovery-industry { margin: 0 0 var(--space-2); color: var(--color-text-muted); font-size: var(--text-metadata); }
 .discovery-company-description { max-width: 55ch; margin: var(--space-6) 0 var(--space-3); color: var(--color-text-muted); font-size: var(--text-supporting); line-height: 1.8; }
+.discovery-company-source { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-pill); }
+.discovery-company-source > span { width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-teal); }
+.discovery-company-summary, .discovery-company-details { min-width: 0; }
+.discovery-description-block { margin-bottom: var(--space-6); }
+.discovery-description-block .discovery-company-description { white-space: pre-line; }
+.discovery-company-description[data-expanded] { max-height: 24rem; overflow-y: auto; scrollbar-color: var(--color-border-strong) transparent; padding-right: var(--space-3); }
+.discovery-description-toggle { min-height: 44px; font-size: var(--text-label); }
+.discovery-description-source { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--text-metadata); }
+.discovery-company-details { padding-left: clamp(1.5rem, 3vw, 3rem); border-left: 1px solid var(--color-border); }
+.discovery-company-details h3 { margin: 0 0 var(--space-4); font-size: var(--text-supporting); font-weight: 500; color: var(--color-gold); }
+.discovery-company-facts { margin: 0; }
+.discovery-company-facts > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--space-3); padding-block: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.discovery-company-facts > div:last-child { border-bottom: 0; }
+.discovery-company-facts dt { color: var(--color-text-muted); font-size: var(--text-metadata); line-height: 1.7; }
+.discovery-company-facts dd { min-width: 0; margin: 0; color: var(--color-text); font-size: var(--text-label); line-height: 1.7; }
+.discovery-company-facts a { color: var(--color-gold); text-decoration: none; text-underline-offset: 4px; }
+.discovery-company-facts a:hover { text-decoration: underline; }
+.discovery-company-facts small { display: block; margin-top: var(--space-1); color: var(--color-text-muted); font-size: var(--text-metadata); }
+.discovery-overview-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.discovery-overview-facts > div { display: block; border: 0; padding: 0; }
+.discovery-overview-facts > div:last-child { grid-column: 1 / -1; }
+.discovery-overview-facts dd { margin-top: var(--space-1); }
+.discovery-missing-field { color: var(--color-text-muted); }
+.discovery-company-feedback:empty { display: none; }
+.discovery-company-feedback p { display: flex; align-items: flex-start; gap: var(--space-3); margin: var(--space-6) 0 0; padding: var(--space-4); background: var(--color-surface); border-left: 2px solid var(--color-teal); font-size: var(--text-label); color: var(--color-text-muted); line-height: 1.7; }
+.discovery-company-feedback p[role='alert'] { border-color: var(--color-gold); }
+.discovery-company-feedback .discovery-spinner { flex-shrink: 0; margin-top: .25rem; }
+.discovery-company-footer { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border); }
+.discovery-company-footer > div { flex: 1 1 16rem; min-width: 0; }
+.discovery-company-footer .discovery-source-note { margin: 0; }
+.discovery-company-refresh { min-height: 44px; font-size: var(--text-metadata); white-space: normal; }
+.discovery-company-sources { max-width: 65ch; color: var(--color-text-muted); font-size: var(--text-metadata); line-height: 1.7; }
+.discovery-company-sources summary { width: fit-content; min-height: 44px; padding-block: var(--space-3); cursor: pointer; color: var(--color-teal); }
+.discovery-company-sources p { margin: 0 0 var(--space-2); }
+.discovery-company :is(button, a, summary):focus-visible { outline: 2px solid var(--color-teal); outline-offset: 4px; }
+.discovery-people { margin-top: var(--space-6); padding: clamp(1.5rem, 3.5vw, 3rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-raised); overflow-wrap: anywhere; }
+.discovery-candidates-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-6); }
+.discovery-candidates-grid > p { grid-column: 1 / -1; color: var(--color-text-muted); font-size: var(--text-label); }
 .discovery-decision-makers { padding-left: clamp(1.5rem, 3vw, 3rem); border-left: 1px solid var(--color-border); }
 .discovery-decision-makers > p:not(.presentation-eyebrow) { color: var(--color-text-muted); font-size: var(--text-label); }
 .discovery-target { display: flex; align-items: flex-start; gap: var(--space-4); margin-top: var(--space-5); }
@@ -182,6 +220,8 @@
   .discovery-state-card h2 { font-size: 2rem; }
   .discovery-skeleton { width: 100%; }
   .discovery-company-grid { grid-template-columns: 1fr; }
+  .discovery-company-details { padding: var(--space-6) 0 0; border-left: 0; border-top: 1px solid var(--color-border); }
+  .discovery-candidates-grid { grid-template-columns: 1fr; }
   .discovery-decision-makers { padding: var(--space-6) 0 0; border: 0; border-top: 1px solid var(--color-border); }
   .discovery-person-path { flex-direction: column; }
   .discovery-person-path > li { padding: 0; }

@@ -15,6 +15,7 @@ export function createApp(provider: DiscoveryProvider = createDiscoveryProvider(
     res.json({ api: { status: 'ok', message: 'Intro Finder API is running', port: Number(process.env.PORT) || 5000 },
       database: { status: getDatabaseStatus(), configured: Boolean(process.env.MONGODB_URI) },
       discovery: { provider: provider.name, configured: provider.available,
+        companyInformation: provider.companyInformationVerification ?? { status: 'not_run', companies: [] },
         verification: provider.verification ?? { status: 'not_run', companySearch: 'not_run', executiveEnrichment: 'not_run' } } })
   })
   // Do not queue history requests against a disconnected database or cache

@@ -164,7 +164,7 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
         {state.kind === 'error' && <section className="discovery-state-card discovery-error" aria-labelledby="discovery-error-heading">
           <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : state.message || 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <span aria-hidden="true">↗</span></button></div>
         </section>}
-        {state.kind === 'success' && <DiscoveryMatches key={savedId ?? state.query} matches={state.matches} total={state.total} matchMode={state.matchMode} onNewSearch={newSearch} />}
+        {state.kind === 'success' && <DiscoveryMatches key={savedId ?? state.query} matches={state.matches} total={state.total} matchMode={state.matchMode} onNewSearch={newSearch} searchId={savedId ?? undefined} loadDetails={service.getCompanyDetails} />}
       </div>
       <footer className="discovery-closing"><span aria-hidden="true">↗</span><p>Meaningful introductions.<br /><strong>New possibilities.</strong></p><span>Let curiosity lead the way.</span></footer>
     </main>

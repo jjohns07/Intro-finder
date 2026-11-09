@@ -7,6 +7,7 @@ import { permittedSnapshot } from '../src/services/history'
 // Deliberately fake credentials and records; none of these tests contact Skrapp.
 const TEST_KEY = 'skrapp-test-only-not-a-real-key'
 const company = { id: 'encoded-search-only', internal_id: '8342903258370330161', name: 'Example', domain: 'example.com',
+  website: 'https://example.com',
   industry: 'Software', city: 'Lagos', country: 'Nigeria', linkedin_url: 'linkedin.com/company/example' }
 const secondCompany = { ...company, internal_id: '5582989491351854253', name: 'Example Labs' }
 const rows = [

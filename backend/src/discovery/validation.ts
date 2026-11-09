@@ -34,3 +34,22 @@ export function dateField(value: unknown): string | undefined {
   if (date && (!/^\d{4}(-\d{2}){0,2}$/.test(date) || !Number.isFinite(Date.parse(date)))) throw new ProviderError('provider_error')
   return date
 }
+
+export function integerField(value: unknown, minimum = 0, maximum = Number.MAX_SAFE_INTEGER): number | undefined {
+  if (value == null) return undefined
+  if (!Number.isSafeInteger(value) || Number(value) < minimum || Number(value) > maximum) throw new ProviderError('provider_error')
+  return Number(value)
+}
+
+export function timestampField(value: unknown): string | undefined {
+  const text = textField(value, 40)
+  if (text && (!/^\d{4}-\d{2}-\d{2}T/.test(text) || !Number.isFinite(Date.parse(text)))) throw new ProviderError('provider_error')
+  return text
+}
+
+export function domainField(value: unknown): string | undefined {
+  const text = textField(value, 253)?.toLowerCase()
+  // A provider's email domain is a separate field, never an invented website URL.
+  if (!text || !/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?\.)+[a-z\d-]{2,63}$/.test(text)) return undefined
+  return text
+}

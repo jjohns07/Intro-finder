@@ -30,7 +30,7 @@ export function executeDiscovery(provider: DiscoveryProvider) {
     try {
       record = await SearchHistory.create({ user, requestId, originalQuery, queryFingerprint: fingerprint,
         normalizedCompanyName: normalizeCompanyName(originalQuery).slice(0, 320),
-        provenance: { provider: provider.name, source: provider.available ? 'approved-source' : 'disabled', snapshotVersion: 2 },
+        provenance: { provider: provider.name, source: provider.available ? 'approved-source' : 'disabled', snapshotVersion: 3 },
       })
     } catch (error) {
       if (!(error && typeof error === 'object' && 'code' in error && error.code === 11000)) throw error

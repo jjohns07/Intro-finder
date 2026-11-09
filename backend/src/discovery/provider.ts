@@ -1,4 +1,4 @@
-import type { DiscoverySearchResult, DiscoveryVerification } from './types'
+import type { Company, CompanyDetails, CompanyInformationVerification, DiscoverySearchResult, DiscoveryVerification } from './types'
 import { PeopleDataLabsProvider } from './providers/peopleDataLabs'
 import { SkrappProvider } from './providers/skrapp'
 
@@ -11,7 +11,10 @@ export interface DiscoveryProvider {
   configurationMessage?: string
   readonly verification?: DiscoveryVerification
   verifyConnection?(): Promise<DiscoveryVerification>
+  readonly companyInformationVerification?: CompanyInformationVerification
+  verifyCompanyInformation?(): Promise<CompanyInformationVerification>
   search(query: string, options: { signal: AbortSignal }): Promise<DiscoverySearchResult>
+  getCompanyDetails?(company: Company, options: { signal: AbortSignal; refresh?: boolean }): Promise<CompanyDetails>
 }
 
 export function createDiscoveryProvider(env: NodeJS.ProcessEnv = process.env): DiscoveryProvider {
@@ -23,6 +26,7 @@ export function createDiscoveryProvider(env: NodeJS.ProcessEnv = process.env): D
     executivesEnabled: env.SKRAPP_EXECUTIVE_SEARCH_ENABLED !== 'false',
     searchRequestsPerMinute: Number(env.SKRAPP_SEARCH_REQUESTS_PER_MINUTE ?? 20),
     searchRequestsPerDay: Number(env.SKRAPP_SEARCH_REQUESTS_PER_DAY ?? 50),
+    companyCacheTtlSeconds: Number(env.SKRAPP_COMPANY_CACHE_TTL_SECONDS ?? 3600),
   })
   if (selected === 'pdl') return new PeopleDataLabsProvider(env)
   return {
@@ -35,4 +39,8 @@ export function createDiscoveryProvider(env: NodeJS.ProcessEnv = process.env): D
 export function shouldVerifyOnStartup(provider: DiscoveryProvider, env: NodeJS.ProcessEnv = process.env) {
   return env.RENDER === 'true' && env.SKRAPP_VERIFY_ON_STARTUP !== 'false'
     && provider.name === 'skrapp' && provider.available && Boolean(provider.verifyConnection)
+}
+
+export function shouldVerifyCompanyInformationOnStartup(provider: DiscoveryProvider, env: NodeJS.ProcessEnv = process.env) {
+  return shouldVerifyOnStartup(provider, env) && env.SKRAPP_VERIFY_COMPANY_INFORMATION !== 'false' && Boolean(provider.verifyCompanyInformation)
 }

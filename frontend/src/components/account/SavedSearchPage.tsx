@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../services/api'
+import { companyDiscovery } from '../../services/discovery'
 import { historyName, historyStatus, searchHistoryService, type SavedSearch } from '../../services/history'
 import { AccountPageLayout, type AccountPageProps } from './AccountPageLayout'
 import { DeleteSearchButton } from './DeleteSearchButton'
@@ -51,9 +52,9 @@ export function SavedSearchPage(props: AccountPageProps) {
               {state.record.status === 'pending' && <button type="button" className="button button--secondary" onClick={() => setAttempt(value => value + 1)}>Refresh status</button>}
               <DeleteSearchButton record={state.record} onDeleted={() => navigate('/history', { replace: true })} />
             </div>
-            <p>Search again creates a new search. This saved result stays unchanged.</p>
+            <p>Search again creates a new search. Refresh company information below to update this saved company profile.</p>
           </section>
-          {state.record.matches?.length || state.record.result ? <DiscoveryMatches matches={state.record.matches?.length ? state.record.matches : [state.record.result!]} total={state.record.totalMatches || 1} matchMode={state.record.matchMode} onNewSearch={() => navigate('/find-introductions')} />
+          {state.record.matches?.length || state.record.result ? <DiscoveryMatches key={state.record.id} matches={state.record.matches?.length ? state.record.matches : [state.record.result!]} total={state.record.totalMatches || 1} matchMode={state.record.matchMode} onNewSearch={() => navigate('/find-introductions')} searchId={state.record.id} loadDetails={companyDiscovery.getCompanyDetails} autoLoadDetails={false} />
             : <section className="history-empty" aria-labelledby="saved-outcome-heading"><p className="presentation-eyebrow">{historyStatus(state.record)}</p><h2 id="saved-outcome-heading">{state.record.status === 'pending' ? 'This search is still in progress.' : state.record.outcome === 'no_matches' ? 'No company matched this search.' : state.record.outcome === 'provider_unavailable' ? 'Discovery was not connected.' : 'No result was saved.'}</h2><p>{state.record.message || 'No company, founder or introduction information was saved with this search.'}</p></section>}
         </>}
     </main>

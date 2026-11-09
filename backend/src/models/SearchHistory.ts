@@ -5,6 +5,9 @@ const companySchema = new Schema({
   id: String, name: String, website: String, industry: String,
   description: String, logoUrl: String, source: String,
   location: String, profileUrl: String,
+  country: String, city: String, region: String, domain: String,
+  employeeRange: String, linkedinEmployeeCount: Number,
+  legalName: String, companyType: String, foundedYear: Number, activityStatus: String,
 }, { _id: false })
 const personSchema = new Schema({
   id: String, name: String, title: String, role: String,

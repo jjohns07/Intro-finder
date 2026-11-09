@@ -31,8 +31,30 @@ export type DiscoveryCompany = {
   website?: string
   source: DiscoverySource
   location?: string
+  country?: string
+  city?: string
+  region?: string
+  domain?: string
+  employeeRange?: string
+  linkedinEmployeeCount?: number
+  legalName?: string
+  companyType?: string
+  foundedYear?: number
+  activityStatus?: string
   profileUrl?: string
   attribution?: { provider: string; recordId: string; retrievedAt: string; reliability: 'aggregated-provider-data' }
+}
+
+export type DiscoveryCompanyDetails = {
+  status: 'available' | 'unavailable' | 'not_configured' | 'provider_error' | 'provider_timeout' | 'rate_limited' | 'provider_access_denied' | 'quota_exceeded'
+  company?: DiscoveryCompany
+  checkedAt: string
+  retrievedAt?: string
+  providerUpdatedAt?: string
+  expiresAt?: string
+  cached: boolean
+  descriptionField?: 'description' | 'description_short' | 'meta_description'
+  retryAfterSeconds?: number
 }
 
 export type DiscoveryPath = {
@@ -58,6 +80,7 @@ export type DiscoveryConnection = {
 
 export type DiscoveryResult = {
   company: DiscoveryCompany
+  companyDetails?: DiscoveryCompanyDetails
   targetPerson?: DiscoveryPerson
   // The domain result only has person IDs. An adapter must resolve those IDs
   // before the UI can show names, photos or relationships without inventing them.
@@ -75,6 +98,7 @@ export type DiscoveryResult = {
 export type DiscoveryService = {
   available: boolean
   search: (companyName: string, options: { signal: AbortSignal; requestId: string }) => Promise<SavedSearch>
+  getCompanyDetails?: (searchId: string, companyId: string, options: { signal: AbortSignal; refresh?: boolean }) => Promise<DiscoveryCompanyDetails>
 }
 
 export const companyDiscovery: DiscoveryService = {
@@ -91,6 +115,18 @@ export const companyDiscovery: DiscoveryService = {
       if (error instanceof ApiError && isSavedFailure(error.data)) return error.data
       throw error
     }
+  },
+  async getCompanyDetails(searchId, companyId, { signal, refresh = false }) {
+    const details = await apiRequest<DiscoveryCompanyDetails>('/discovery/company-details', {
+      method: 'POST', signal, body: JSON.stringify({ searchId, companyId, refresh }),
+    })
+    if (!details || !['available', 'unavailable', 'not_configured', 'provider_error', 'provider_timeout', 'rate_limited', 'provider_access_denied', 'quota_exceeded'].includes(details.status)
+      || !Number.isFinite(Date.parse(details.checkedAt))
+      || (details.status === 'available' && !details.company)
+      || (details.company && (details.company.id !== companyId || typeof details.company.name !== 'string' || details.company.source !== 'approved-source'))) {
+      throw new ApiError('The server returned invalid company information. Please try again.', 502)
+    }
+    return details
   },
 }
 

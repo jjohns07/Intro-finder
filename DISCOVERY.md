@@ -111,6 +111,10 @@ The application stores limited company/executive snapshots. The operator must en
 
 Ordinary tests use explicitly fake responses and an isolated MongoDB test instance, never the configured production database. They do not consume Skrapp credits.
 
+Local verification on 7 November 2026: 33 backend tests passed and the live test was skipped; 14 frontend tests passed with one worker and a 20-second test timeout. Both production builds and frontend lint passed. This host lacks AVX, so database integration tests used the existing version override with MongoDB 4.4.29 and a temporary OpenSSL compatibility library instead of the default MongoDB 7.0.24. No production database settings were changed. These results do not establish successful authenticated Skrapp access on Render.
+
+Live verification was subsequently observed on Render for commit 4378178. The backend reported a successful real company search and executive enrichment at 2026-11-07T19:11:12.560Z, returning five executive candidates. Its health response showed provider skrapp, configured true, verification status passed, companySearch passed, executiveEnrichment passed, and database status connected. This is actual provider access evidence, separate from the mocked local tests; it does not establish exhaustive company/founder coverage or relationship data.
+
 ```sh
 cd backend
 npm test

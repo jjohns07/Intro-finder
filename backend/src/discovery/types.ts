@@ -10,6 +10,20 @@ export interface DiscoveryVerification {
   checkedAt?: string
 }
 
+export interface CompanyInformationVerification {
+  status: 'not_run' | 'running' | 'passed' | 'partial' | 'failed'
+  checkedAt?: string
+  companies: {
+    name: string
+    domain: string
+    status: 'not_run' | 'passed' | 'no_match' | 'no_data' | 'needs_review' | 'not_configured' | ProviderFailure
+    description?: 'available' | 'unavailable'
+    country?: 'matched' | 'different' | 'unavailable'
+    industry?: 'available' | 'unavailable'
+    fields?: string[]
+  }[]
+}
+
 export type PersonRole =
   | 'founder'
   | 'executive'
@@ -50,8 +64,33 @@ export interface Company {
   source: DataSourceKind
   metadata?: Record<string, unknown>
   location?: string
+  country?: string
+  city?: string
+  region?: string
+  domain?: string
+  employeeRange?: string
+  // This is a LinkedIn membership count, not the company's actual headcount.
+  linkedinEmployeeCount?: number
+  legalName?: string
+  companyType?: string
+  foundedYear?: number
+  activityStatus?: string
   profileUrl?: string
   attribution?: { provider: string; recordId: string; retrievedAt: string; reliability: 'aggregated-provider-data' }
+}
+
+export interface CompanyDetails {
+  status: 'available' | 'unavailable' | 'not_configured' | ProviderFailure
+  // Kept separately from the search card so missing or failed enrichment cannot
+  // overwrite the original company match, its sources, or its people.
+  company?: Company
+  checkedAt: string
+  retrievedAt?: string
+  providerUpdatedAt?: string
+  expiresAt?: string
+  cached: boolean
+  descriptionField?: 'description' | 'description_short' | 'meta_description'
+  retryAfterSeconds?: number
 }
 
 export interface EmploymentEvidence {
@@ -108,6 +147,7 @@ export interface DiscoveryRequest {
 
 export interface DiscoveryResult {
   company: Company
+  companyDetails?: CompanyDetails
   targetPerson?: Person
   people?: Person[]
   connections?: Connection[]

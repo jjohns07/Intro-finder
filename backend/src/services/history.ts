@@ -1,6 +1,6 @@
 import SearchHistory, { type HistoryDocument } from '../models/SearchHistory'
-import type { DiscoveryResult, Person } from '../discovery/types'
-import { dateField, normalizeQuery } from '../discovery/validation'
+import type { Company, CompanyDetails, DiscoveryResult, Person } from '../discovery/types'
+import { dateField, domainField, integerField, normalizeQuery, timestampField } from '../discovery/validation'
 
 export const normalizeCompanyName = normalizeQuery
 
@@ -71,13 +71,51 @@ function personSnapshot(person: Person): Person {
   }
 }
 
+function companySnapshot(company: Company): Company {
+  if (company.source !== 'approved-source') throw new Error('Unverified company')
+  if (company.attribution && (company.attribution.recordId !== company.id || !Number.isFinite(Date.parse(company.attribution.retrievedAt))
+    || company.attribution.reliability !== 'aggregated-provider-data')) throw new Error('Invalid attribution')
+  return {
+    id: shortText(company.id, 200, true)!, name: shortText(company.name, 200, true)!,
+    description: shortText(company.description, 20_000), industry: shortText(company.industry, 200),
+    website: webUrl(company.website), logoUrl: webUrl(company.logoUrl), source: 'approved-source',
+    location: shortText(company.location, 1000), country: shortText(company.country, 200),
+    city: shortText(company.city, 200), region: shortText(company.region, 200), domain: domainField(company.domain),
+    employeeRange: shortText(company.employeeRange, 100), linkedinEmployeeCount: integerField(company.linkedinEmployeeCount),
+    legalName: shortText(company.legalName, 300), companyType: shortText(company.companyType, 200),
+    foundedYear: integerField(company.foundedYear, 1, 9999), activityStatus: shortText(company.activityStatus, 200),
+    profileUrl: webUrl(company.profileUrl),
+    ...(company.attribution ? { attribution: { provider: shortText(company.attribution.provider, 100, true)!,
+      recordId: shortText(company.attribution.recordId, 200, true)!, retrievedAt: shortText(company.attribution.retrievedAt, 40, true)!,
+      reliability: 'aggregated-provider-data' as const } } : {}),
+  }
+}
+
+export function companyDetailsSnapshot(details: CompanyDetails, companyId: string): CompanyDetails {
+  if (!['available', 'unavailable', 'not_configured', 'provider_error', 'provider_timeout', 'rate_limited', 'provider_access_denied', 'quota_exceeded'].includes(details.status)
+    || (details.company && details.company.id !== companyId)
+    || (details.status === 'available' && !details.company)
+    || (details.status === 'unavailable' && details.company)
+    || !timestampField(details.checkedAt)) throw new Error('Invalid company details')
+  if (details.descriptionField && (!['description', 'description_short', 'meta_description'].includes(details.descriptionField)
+    || !details.company?.description)) throw new Error('Invalid description source')
+  const snapshot: CompanyDetails = {
+    status: details.status, ...(details.company ? { company: companySnapshot(details.company) } : {}),
+    checkedAt: details.checkedAt, retrievedAt: timestampField(details.retrievedAt),
+    providerUpdatedAt: timestampField(details.providerUpdatedAt), expiresAt: timestampField(details.expiresAt),
+    cached: details.cached === true, descriptionField: details.descriptionField,
+    retryAfterSeconds: integerField(details.retryAfterSeconds, 1, 86_400),
+  }
+  // MongoDB Mixed updates otherwise serialize nested undefined values as null.
+  // Store the same optional-field contract that JSON sends to the browser.
+  return JSON.parse(JSON.stringify(snapshot)) as CompanyDetails
+}
+
 // Explicit projection prevents provider credentials, contact emails and arbitrary
 // metadata from leaking into stored snapshots. It also rejects fixture results.
 export function permittedSnapshot(result: DiscoveryResult): DiscoveryResult {
   if (result.source !== 'approved-source' || result.company?.source !== 'approved-source') throw new Error('Unverified company')
   const company = result.company
-  if (company.attribution && (company.attribution.recordId !== company.id || !Number.isFinite(Date.parse(company.attribution.retrievedAt))
-    || company.attribution.reliability !== 'aggregated-provider-data')) throw new Error('Invalid attribution')
   if (result.peopleStatus && !['available', 'no_candidates', 'not_configured', 'rate_limited', 'provider_error', 'provider_timeout', 'provider_access_denied', 'quota_exceeded'].includes(result.peopleStatus)) throw new Error('Invalid people status')
   const targetPerson = result.targetPerson ? personSnapshot(result.targetPerson) : undefined
   const people = (result.people ?? []).map(personSnapshot)
@@ -109,14 +147,8 @@ export function permittedSnapshot(result: DiscoveryResult): DiscoveryResult {
     connection.fromPersonId === id && connection.toPersonId === path.path[index + 1] && connection.relationship !== 'unknown')))) throw new Error('Path lacks relationship evidence')
   if (!Number.isFinite(Date.parse(result.generatedAt))) throw new Error('Invalid result date')
   return {
-    company: { id: shortText(company.id, 200, true)!, name: shortText(company.name, 200, true)!,
-      description: shortText(company.description, 5000), industry: shortText(company.industry, 200),
-      website: webUrl(company.website), logoUrl: webUrl(company.logoUrl), source: 'approved-source',
-      location: shortText(company.location, 300), profileUrl: webUrl(company.profileUrl),
-      ...(company.attribution ? { attribution: { provider: shortText(company.attribution.provider, 100, true)!,
-        recordId: shortText(company.attribution.recordId, 200, true)!, retrievedAt: shortText(company.attribution.retrievedAt, 40, true)!,
-        reliability: 'aggregated-provider-data' as const } } : {}),
-    },
+    company: companySnapshot(company),
+    ...(result.companyDetails ? { companyDetails: companyDetailsSnapshot(result.companyDetails, company.id) } : {}),
     targetPerson, people, paths, connections, source: 'approved-source', generatedAt: result.generatedAt,
     warnings: (result.warnings ?? []).slice(0, 20).map(warning => shortText(warning, 1000, true)!),
     peopleStatus: result.peopleStatus, peopleTruncated: result.peopleTruncated === true,
