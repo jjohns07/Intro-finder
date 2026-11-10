@@ -86,7 +86,7 @@ export type DiscoveryConnection = {
   relationship: 'direct' | 'warm' | 'introduced' | 'vouched' | 'unknown' | 'direct_connection' | 'follows' | 'mutual_follow' | 'user_confirmed'
   notes?: string
   source: DiscoverySource
-  evidence?: { source: 'csv'; verification: 'unverified' | 'user_confirmed'; statement: string; observedAt: string; importedAt: string; updatedAt: string }
+  evidence?: { source: 'csv'; verification: 'unverified' | 'user_confirmed'; statement: string; observedAt: string; importedAt: string; updatedAt: string; recordId?: string; importId?: string; recordNumber?: number }
 }
 
 export type DiscoveryResult = {

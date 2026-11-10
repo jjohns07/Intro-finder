@@ -13,6 +13,8 @@ import type { Company, CompanyDetails, DiscoveryResult } from '../src/discovery/
 import { SkrappProvider } from '../src/discovery/providers/skrapp'
 import { CandidateIdentity, NetworkPerson, NetworkRelationship, NetworkState, initializeNetworkIndexes } from '../src/models/Network'
 import { CSV_COLUMNS } from '../src/network/csv'
+import { discoverIntroductionPaths } from '../src/network/discoverPaths'
+import { importNetwork } from '../src/network/store'
 
 let mongo: MongoMemoryServer, server: Server, base: string, token: string, otherToken: string
 let calls = 0
@@ -26,6 +28,20 @@ const provider: DiscoveryProvider = { name: 'test-provider', available: true, sn
 }
 const post = (companyName: unknown, key: string, auth = token) => fetch(`${base}/api/discovery/search`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key, ...(auth ? { Authorization: `Bearer ${auth}` } : {}) }, body: JSON.stringify({ companyName }) })
 const get = (path: string, auth = token) => fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${auth}` } })
+// Provider snapshots must survive history reads exactly; network checks are live
+// and have their own refreshed timestamp, separate from provider retrieval time.
+function assertRestoredMatches(actual: DiscoveryResult[], expected: DiscoveryResult[]) {
+  assert.equal(actual.length, expected.length)
+  actual.forEach((match, index) => {
+    if (!match.introduction && !expected[index].introduction) return
+    assert.ok(Number.isFinite(Date.parse(match.introduction!.checkedAt)))
+    assert.ok(Date.parse(match.introduction!.checkedAt) >= Date.parse(expected[index].introduction!.checkedAt))
+  })
+  const withoutCheckTime = (matches: DiscoveryResult[]) => matches.map(match => ({ ...match,
+    ...(match.introduction ? { introduction: { ...match.introduction, checkedAt: undefined } } : {}),
+  }))
+  assert.deepEqual(withoutCheckTime(actual), withoutCheckTime(expected))
+}
 const details = (searchId: string, companyId = sample.company.id, refresh: unknown = false, auth = token) => fetch(`${base}/api/discovery/company-details`, {
   method: 'POST', headers: { 'Content-Type': 'application/json', ...(auth ? { Authorization: `Bearer ${auth}` } : {}) },
   body: JSON.stringify({ searchId, companyId, refresh }),
@@ -79,7 +95,7 @@ test('successful search persists and replays exactly once; account ownership enf
   assert.equal((await post('Different', 'success-key')).status, 409)
   assert.equal((await get(`/api/history/${record.id}`, otherToken)).status, 404)
   const detail = await (await get(`/api/history/${record.id}`)).json()
-  assert.deepEqual(detail.matches, record.matches)
+  assertRestoredMatches(detail.matches, record.matches)
   const history = await (await get('/api/history?q=Test')).json()
   assert.ok(history.records.some((item: { id: string }) => item.id === record.id))
   assert.equal('matches' in history.records[0], false)
@@ -106,7 +122,7 @@ test('ambiguous matches persist without silently choosing a company', async () =
   const record = await (await post('Test', 'ambiguous-key')).json()
   assert.equal(record.outcome, 'ambiguous'); assert.equal(record.company, null); assert.equal(record.result, null)
   assert.equal(record.totalMatches, 9); assert.equal(record.matches.length, 2)
-  assert.deepEqual((await (await get(`/api/history/${record.id}`)).json()).matches, record.matches)
+  assertRestoredMatches((await (await get(`/api/history/${record.id}`)).json()).matches, record.matches)
 })
 
 test('a single relevance match is saved for explicit selection, not treated as an exact match', async () => {
@@ -159,7 +175,7 @@ test('Skrapp projection survives the authenticated HTTP and MongoDB flow without
     assert.equal((await request()).status, 200)
     assert.equal(upstreamCalls, 2)
     const restored = await (await get('/api/history/' + record.id)).json()
-    assert.deepEqual(restored.matches, record.matches)
+    assertRestoredMatches(restored.matches, record.matches)
     assert.equal((await get('/api/history/' + record.id, otherToken)).status, 404)
   } finally {
     skrappServer.closeAllConnections()
@@ -244,7 +260,7 @@ test('enriching a selected ambiguous match preserves other matches and does not 
   const record = await (await post('Test', 'profile-ambiguous-key')).json()
   assert.equal((await details(record.id, second.company.id)).status, 200)
   const restored = await (await get('/api/history/' + record.id)).json()
-  assert.deepEqual(restored.matches[0], record.matches[0])
+  assertRestoredMatches([restored.matches[0]], [record.matches[0]])
   assert.equal(restored.matches[1].companyDetails.company.id, second.company.id)
   assert.equal(restored.outcome, 'ambiguous'); assert.equal(restored.company, null); assert.equal(restored.result, null)
 })
@@ -363,6 +379,7 @@ test('identity confirmation yields direct and one-intermediary paths for multipl
   await resetNetworks()
   const saved = await networkSearch('network-paths-key')
   assert.equal(saved.result.introduction.status, 'network_not_imported')
+  assert.equal(saved.result.introduction.networkStatus, 'not_imported')
   const imported = await (await csvImport(csvNetwork(csvEdge('me', 'a'), csvEdge('a', 'founder'), csvEdge('me', 'executive')))).json()
   const beforeProvider = calls
   const unresolved = await (await networkRequest('discovery/paths', 'POST', { searchId: saved.id, companyId: sample.company.id })).json()
@@ -372,6 +389,15 @@ test('identity confirmation yields direct and one-intermediary paths for multipl
   assert.equal(founder.paths[0].targetPersonId, networkCandidate.id)
   assert.equal(founder.people.find((person: any) => person.isCurrentUser).name, 'Test User')
   assert.ok(founder.connections.every((edge: any) => edge.source === 'user-import' && edge.evidence.verification === 'user_confirmed' && edge.evidence.statement.includes('Synthetic')))
+  assert.equal(founder.introduction.networkStatus, 'imported')
+  assert.equal(founder.introduction.maxEvidenceAgeDays, 365)
+  assert.ok(Number.isFinite(Date.parse(founder.introduction.checkedAt)))
+  for (const edge of founder.connections) {
+    const stored = await NetworkRelationship.findById(edge.evidence.recordId).lean()
+    assert.equal(edge.evidence.importId, stored!.importId.toString())
+    assert.equal(edge.evidence.recordNumber, stored!.row)
+    assert.equal(edge.evidence.updatedAt, stored!.updatedAt.toISOString())
+  }
   const both = await (await matchIdentity(saved.id, networkExecutive.id, 'executive', imported.revision)).json()
   assert.equal(both.paths.length, 2)
   assert.equal(both.paths.find((path: any) => path.targetPersonId === networkExecutive.id).intermediateCount, 0)
@@ -391,12 +417,13 @@ test('another account cannot access a saved search, map a foreign contact or tra
   assert.equal((await matchIdentity(first.id, networkCandidate.id, 'founder', imported.revision, otherToken)).status, 404)
   assert.equal((await networkRequest('discovery/paths', 'POST', { searchId: first.id, companyId: sample.company.id, user: 'forged' }, otherToken)).status, 404)
   assert.equal((await matchIdentity(second.id, networkCandidate.id, 'founder', 0, otherToken)).status, 409)
-  await csvImport(csvNetwork(csvEdge('me', 'own-contact')), 0, otherToken)
-  assert.equal((await matchIdentity(second.id, networkCandidate.id, 'founder', 1, otherToken)).status, 404)
+  await csvImport(csvNetwork(csvEdge('me', 'own-contact'), csvEdge('founder', 'own-contact')), 0, otherToken)
+  assert.equal((await matchIdentity(second.id, networkCandidate.id, 'foreign-contact', 1, otherToken)).status, 404)
+  assert.equal((await matchIdentity(second.id, networkCandidate.id, 'founder', 1, otherToken)).status, 200)
   assert.equal((await matchIdentity(first.id, networkCandidate.id, 'founder', imported.revision)).status, 200)
   const other = await (await get('/api/history/' + second.id, otherToken)).json()
-  assert.equal(other.result.paths.length, 0); assert.equal(other.result.introduction.status, 'identity_unresolved')
-  assert.ok(!JSON.stringify(other).includes('Synthetic fixture confirms'))
+  assert.equal(other.result.paths.length, 0); assert.equal(other.result.introduction.status, 'no_path')
+  assert.ok(!other.result.people.some((person: any) => person.isCurrentUser), 'Identical local contact IDs cannot traverse another account’s direct edge')
 })
 
 test('follow records and missing candidate identities never become introduction paths', async () => {
@@ -448,6 +475,7 @@ test('candidate absence, provider failure and graph failure are separate outcome
   run = async () => ({ matches: [{ ...sample, peopleStatus: 'no_candidates' }], total: 1, matchMode: 'exact' })
   const absent = await (await post('Test Company', 'network-no-candidate')).json()
   assert.equal(absent.result.introduction.status, 'candidate_not_identified')
+  assert.equal(absent.result.introduction.networkStatus, 'not_imported')
   run = async () => ({ matches: [{ ...sample, peopleStatus: 'provider_error' }], total: 1, matchMode: 'exact' })
   const failedProvider = await (await post('Test Company', 'network-candidate-error')).json()
   assert.equal(failedProvider.result.introduction.status, 'candidate_provider_error')
@@ -456,7 +484,32 @@ test('candidate absence, provider failure and graph failure are separate outcome
   const graphError = await (await networkRequest('discovery/paths', 'POST', { searchId: saved.id, companyId: sample.company.id })).json()
   failure.mock.restore()
   assert.equal(graphError.introduction.status, 'network_error')
+  assert.equal(graphError.introduction.networkStatus, 'unavailable')
   assert.equal(graphError.company.id, sample.company.id)
   assert.ok(graphError.people.some((person: any) => person.id === networkCandidate.id))
   assert.deepEqual(graphError.paths, [])
+})
+
+test('multi-candidate discovery separates path caps from unreachable identities and retains independent network status', async () => {
+  await resetNetworks()
+  const user = await User.findOne({ email: 'test@example.com' }).lean()
+  const actor = { id: user!._id.toString(), name: user!.name, email: user!.email }
+  const rows = Array.from({ length: 4 }, (_, i) => [csvEdge('me', `a${i}`), csvEdge(`a${i}`, 'founder')]).flat()
+  await importNetwork(actor.id, csvNetwork(...rows, csvEdge('executive', 'founder')), 0)
+  const state = await NetworkState.findOne({ owner: actor.id }).lean()
+  await CandidateIdentity.insertMany([networkCandidate, networkExecutive].map((candidate, index) => ({
+    owner: actor.id, importId: state!.activeImport, provider: provider.name, companyId: sample.company.id,
+    candidateId: candidate.id, personId: index ? 'executive' : 'founder', verification: 'user_confirmed',
+    statement: 'Synthetic test identity, not an actual discovery.',
+  })))
+  const [result, absent] = await discoverIntroductionPaths(actor, [
+    { ...sample, people: [networkCandidate, networkExecutive], peopleStatus: 'available' },
+    { ...sample, company: { ...sample.company, id: 'fixture-no-candidates' } },
+  ], provider.name)
+  assert.equal(result.paths!.length, 3)
+  assert.equal(result.introduction!.candidates[0].pathsLimited, true)
+  assert.equal(result.introduction!.candidates[1].status, 'no_path')
+  assert.deepEqual(result.introduction!.limits, ['path_count'])
+  assert.equal(absent.introduction!.status, 'candidate_not_identified')
+  assert.equal(absent.introduction!.networkStatus, 'imported')
 })

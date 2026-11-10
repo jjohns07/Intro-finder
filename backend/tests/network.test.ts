@@ -49,6 +49,41 @@ test('shortest paths: depth and result bounds limit cyclic/dense graph work', ()
   assert.equal(new Set(dense.paths.map(path => path.nodes.join('|'))).size, 3)
 })
 
+test('shortest paths: an alternative cap does not imply an incomplete search for other targets', () => {
+  const graph = Array.from({ length: 4 }, (_, i) => [edge('me', `a${i}`), edge(`a${i}`, 'founder')]).flat()
+  const result = paths(['founder', 'unreachable'], graph)
+  assert.equal(result.paths.length, 3)
+  assert.deepEqual(result.limits, ['path_count'])
+  assert.deepEqual(result.limitedTargets, ['founder'])
+  assert.equal(result.searchLimited, false)
+  const exactlyThree = paths(['founder'], graph.slice(0, 6))
+  assert.equal(exactlyThree.paths.length, 3)
+  assert.equal(exactlyThree.limited, false)
+})
+
+test('shortest paths: cycles at the depth boundary and unrelated longer routes do not falsely limit results', () => {
+  const graph = [edge('me', 'a'), edge('a', 'b'), edge('b', 'c'), edge('c', 'd'), edge('d', 'a')]
+  assert.equal(paths(['unreachable'], graph).limited, false)
+  assert.equal(paths(['founder'], [...graph, edge('d', 'e'), edge('me', 'founder')]).limited, false)
+  const beyondDepth = paths(['e'], [...graph, edge('d', 'e')])
+  assert.equal(beyondDepth.searchLimited, true)
+  assert.deepEqual(beyondDepth.limits, ['depth'])
+})
+
+test('shortest paths: oversized input never presents a truncated graph route as shortest', () => {
+  const graph = [edge('me', 'a'), edge('a', 'founder'), ...Array.from({ length: 999 }, (_, i) => edge(`x${i}`, `x${i + 1}`)), edge('me', 'founder')]
+  const result = paths(['founder'], graph)
+  assert.deepEqual(result.paths, [])
+  assert.deepEqual(result.limits, ['edge_count'])
+  assert.equal(result.visited, 0)
+})
+
+test('shortest paths: duplicate targets do not consume the candidate allowance', () => {
+  const result = paths(Array(8).fill('founder'), [edge('me', 'founder')])
+  assert.equal(result.paths.length, 1)
+  assert.equal(result.limited, false)
+})
+
 const header = CSV_COLUMNS.join(',')
 const row = 'me,,,a,"Fixture, Contact",https://example.com/person/a,direct_connection,user_confirmed,We know each other through a test project.,2026-11-01'
 test('CSV accepts BOM, CRLF, quoted commas and escaped quotes, and keeps dates and stable IDs', () => {

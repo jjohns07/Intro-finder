@@ -169,7 +169,7 @@ Skrapp does not provide individual person IDs in this category. Candidate IDs ar
 
 Skrapp advertises 40M+ companies, but company and executive coverage is not universal. Fields may be absent or outdated, and executive lists are not complete founder registers. Returned names and titles are provider-supported candidates, not independently verified facts.
 
-There is no relationship provider: `paths` is null, connections are empty, and connection status is unavailable. No mutual connections, trust scores, X-follow signals, contact emails or phone numbers are generated. LinkedIn URLs supplied by Skrapp are references; the backend does not fetch profile pages or use browser extensions, scraping, or platform credentials.
+The Skrapp adapter supplies no relationships: its provider snapshot has `paths: null` and empty connections. The authenticated discovery response now separately computes introduction paths from the user's confirmed private CSV network. See [Introduction path discovery](INTRODUCTION_PATHS.md) for import structure, identity confirmation, evidence rules, graph limits, status codes and verification limits. No mutual connections, trust scores, X-follow signals, contact emails or phone numbers are generated. LinkedIn URLs supplied by Skrapp are references; the backend does not fetch profile pages or use browser extensions, scraping, or platform credentials.
 
 ## Credentials and Render configuration
 

@@ -26,6 +26,7 @@
 .network-match-form :is(input:not([type='checkbox']), select, textarea) { width: 100%; min-width: 0; padding: .65rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface-raised); color: var(--color-text); font: inherit; }
 .network-match-form textarea { min-height: 6rem; resize: vertical; }
 .network-match-form .button { white-space: normal; }
+.network-contact-pages { display: flex; flex-wrap: wrap; gap: .75rem; }
 .discovery-target > div { min-width: 0; }
 .path-person-details { width: 100%; font-size: var(--text-metadata); line-height: 1.6; }
 .path-person-details summary { font-size: .7rem; min-height: 44px; }

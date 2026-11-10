@@ -11,13 +11,14 @@ import type { DiscoveryResult } from '../services/discovery'
 const status: NetworkStatus = { imported: false, revision: 0, personCount: 0, relationshipCount: 0, source: null, socialIntegration: 'unavailable' }
 const founder = { id: 'fixture-founder', name: 'Fixture Founder', title: 'Co-founder', role: 'founder', source: 'approved-source' as const }
 const evidence = { source: 'csv' as const, verification: 'user_confirmed' as const, statement: 'Synthetic evidence from our fixture project.',
+  recordId: 'fixture-relationship', importId: 'fixture-import', recordNumber: 2,
   observedAt: '2026-11-01T00:00:00.000Z', importedAt: '2026-11-10T00:00:00.000Z', updatedAt: '2026-11-10T00:00:00.000Z' }
 const identity = { personId: 'founder', name: 'Fixture Founder Contact', verification: 'user_confirmed' as const, statement: 'Synthetic identity evidence for the test candidate.', confirmedAt: '2026-11-10T00:00:00.000Z' }
 const result: DiscoveryResult = { company: { id: 'fixture-company', name: 'Fixture Company', source: 'approved-source' }, source: 'approved-source',
   people: [{ id: 'me', name: 'Fixture User', isCurrentUser: true, source: 'user-import' }, { id: 'a', name: 'Fixture Connector', title: 'Fixture colleague', profileUrl: 'https://example.com/a', source: 'user-import', importedAt: evidence.importedAt }, founder],
   connections: [{ id: 'one', fromPersonId: 'me', toPersonId: 'a', relationship: 'direct_connection', source: 'user-import', evidence }, { id: 'two', fromPersonId: 'a', toPersonId: founder.id, relationship: 'user_confirmed', source: 'user-import', evidence }],
   paths: [{ id: 'fixture-path', startPersonId: 'me', targetPersonId: founder.id, path: ['me', 'a', founder.id], connectionIds: ['one', 'two'], steps: 2, intermediateCount: 1, source: 'user-import', oldestEvidenceAt: evidence.observedAt }],
-  introduction: { status: 'available', socialIntegration: 'unavailable', networkRevision: 1, networkUpdatedAt: evidence.importedAt, maxDepth: 4, maxPathsPerCandidate: 3, limited: false, candidates: [{ candidateId: founder.id, status: 'available', identity }] },
+  introduction: { status: 'available', socialIntegration: 'unavailable', networkStatus: 'imported', checkedAt: '2026-11-10T12:00:00.000Z', maxEvidenceAgeDays: 365, networkRevision: 1, networkUpdatedAt: evidence.importedAt, maxDepth: 4, maxPathsPerCandidate: 3, limited: false, candidates: [{ candidateId: founder.id, status: 'available', identity }] },
 }
 const mount = (node: React.ReactNode) => render(<MemoryRouter>{node}</MemoryRouter>)
 
@@ -29,6 +30,8 @@ it('shows each evidenced edge, steps, intermediaries, dates and inspectable peop
   expect(screen.getAllByText(evidence.statement)).toHaveLength(2)
   expect(screen.getAllByText(/Confirmed by you; not independently verified/)).toHaveLength(2)
   expect(screen.getAllByText(/Observed:/)[0].querySelector('time')?.dateTime).toBe(evidence.observedAt)
+  expect(screen.getAllByText('CSV record 2 (including the header).')).toHaveLength(2)
+  expect(screen.getByText(/Paths checked:/).querySelector('time')?.dateTime).toBe(result.introduction!.checkedAt)
   expect(screen.getByRole('link', { name: /Manage your network/ }).getAttribute('href')).toBe('/network')
 })
 
@@ -37,12 +40,50 @@ it('does not display a chain with missing evidence, a follow edge, or an unconfi
     { ...result, connections: result.connections!.map(edge => ({ ...edge, evidence: undefined })) },
     { ...result, connections: result.connections!.map(edge => ({ ...edge, relationship: 'follows' as const })) },
     { ...result, introduction: { ...result.introduction!, candidates: [] } },
+    { ...result, connections: result.connections!.map(edge => ({ ...edge, evidence: { ...evidence, observedAt: '2020-01-01' } })) },
+    { ...result, connections: result.connections!.map(edge => ({ ...edge, evidence: { ...evidence, updatedAt: 'invalid-date' } })) },
+    { ...result, introduction: { ...result.introduction!, status: 'network_error' as const } },
   ]) {
     const view = mount(<DiscoveryResults result={invalid} onNewSearch={() => {}} />)
     expect(screen.queryByRole('button', { name: /Explore this path/ })).toBeNull()
     expect(screen.getByText(/lack complete people, identity confirmation or relationship evidence/)).toBeTruthy()
     view.unmount()
   }
+})
+
+it('keeps unresolved and bounded candidate explanations visible alongside available paths', () => {
+  mount(<DiscoveryResults result={{ ...result, people: [...result.people,
+    { ...founder, id: 'fixture-other', name: 'Fixture Other Founder' }, { ...founder, id: 'fixture-deep', name: 'Fixture Distant Founder' }],
+    introduction: { ...result.introduction!, limited: true, limits: ['path_count'], candidates: [
+      { ...result.introduction!.candidates[0], pathsLimited: true },
+      { candidateId: 'fixture-other', status: 'identity_unresolved' }, { candidateId: 'fixture-deep', status: 'search_limited' },
+    ] },
+  }} onNewSearch={() => {}} />)
+  expect(screen.getByRole('button', { name: /Explore this path/ })).toBeTruthy()
+  expect(screen.getByText('No identity match confirmed for this candidate yet.')).toBeTruthy()
+  expect(screen.getByText('No path to this candidate was found within the search limits.')).toBeTruthy()
+  expect(screen.getByText('Additional shortest paths exist. Results are capped per candidate.')).toBeTruthy()
+})
+
+it('can select contacts beyond the first page and resets identity evidence when the selected person changes', async () => {
+  const people = vi.spyOn(networkService, 'people')
+    .mockResolvedValueOnce({ ...status, imported: true, revision: 1, total: 51, people: [{ localId: 'first', name: 'Fixture First' }] })
+    .mockResolvedValueOnce({ ...status, imported: true, revision: 1, total: 51, people: [{ localId: 'last', name: 'Fixture Last' }, { localId: 'another', name: 'Fixture Another' }] })
+  mount(<CandidateNetworkMatch person={founder} companyId="fixture-company" searchId="saved-fixture" onResult={() => {}} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Match to your network' }))
+  await screen.findByRole('option', { name: 'Fixture First · first' })
+  fireEvent.click(screen.getByRole('button', { name: 'Next contacts' }))
+  await screen.findByRole('option', { name: 'Fixture Last · last' })
+  expect(people).toHaveBeenLastCalledWith('', 2)
+  expect(screen.getByRole('button', { name: 'Next contacts' }).hasAttribute('disabled')).toBe(true)
+  fireEvent.change(screen.getByLabelText('Contact for Fixture Founder'), { target: { value: 'last' } })
+  fireEvent.change(screen.getByLabelText('Evidence for this identity'), { target: { value: identity.statement } })
+  fireEvent.click(screen.getByRole('checkbox', { name: /I confirm this imported contact/ }))
+  expect(screen.getByRole('button', { name: 'Confirm identity and find paths' }).hasAttribute('disabled')).toBe(false)
+  fireEvent.change(screen.getByLabelText('Contact for Fixture Founder'), { target: { value: 'another' } })
+  expect(screen.getByRole('button', { name: 'Confirm identity and find paths' }).hasAttribute('disabled')).toBe(true)
+  expect((screen.getByLabelText('Evidence for this identity') as HTMLTextAreaElement).value).toBe('')
+  expect((screen.getByRole('checkbox', { name: /I confirm this imported contact/ }) as HTMLInputElement).checked).toBe(false)
 })
 
 it('distinguishes missing network, unresolved identity, candidate failure and bounded no-path outcomes', () => {

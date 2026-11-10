@@ -4,7 +4,7 @@ import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { isDemonstration, safeWebUrl, type DiscoveryCompanyDetails, type DiscoveryConnection, type DiscoveryPath, type DiscoveryPerson, type DiscoveryResult } from '../../services/discovery'
 import { CompanyInformation, type CompanyInformationProps } from './CompanyInformation'
 import { CandidateNetworkMatch } from './CandidateNetworkMatch'
-import { networkService, type IntroductionStatus } from '../../services/network'
+import { networkService, type IntroductionReport, type IntroductionStatus } from '../../services/network'
 
 type CompanyLoadingProps = Pick<CompanyInformationProps, 'searchId' | 'loadDetails' | 'autoLoadDetails'>
 
@@ -84,6 +84,26 @@ const pathReasons: Record<IntroductionStatus, string> = {
   network_error: 'Your network could not be checked or changed during this request. Refresh paths to try again; your company and candidate information remains available.',
 }
 
+function CandidatePathStatus({ candidate }: { candidate?: IntroductionReport['candidates'][number] }) {
+  if (!candidate) return null
+  const messages = {
+    available: 'An evidenced path is available below.',
+    identity_unresolved: 'No identity match confirmed for this candidate yet.',
+    no_path: 'No eligible path to this candidate in your imported network.',
+    search_limited: 'No path to this candidate was found within the search limits.',
+  }
+  return <p>{messages[candidate.status]}{candidate.pathsLimited ? ' Additional shortest paths exist; only the first three are shown.' : ''}</p>
+}
+
+function eligibleEvidence(edge: DiscoveryConnection, checkedAt: number, maxAgeDays: number) {
+  const evidence = edge.evidence
+  if (!evidence || evidence.source !== 'csv' || evidence.verification !== 'user_confirmed'
+    || evidence.statement.trim().length < 10 || evidence.statement.length > 500) return false
+  const observed = Date.parse(evidence.observedAt)
+  return [observed, Date.parse(evidence.importedAt), Date.parse(evidence.updatedAt)].every(Number.isFinite)
+    && observed <= checkedAt && checkedAt - observed <= maxAgeDays * 86_400_000
+}
+
 function PathPanel({ path, people, connections, index }: {
   path: DiscoveryPath; people: DiscoveryPerson[]; connections: readonly DiscoveryConnection[]; index: number
 }) {
@@ -126,12 +146,14 @@ function PathPanel({ path, people, connections, index }: {
       </footer>
       <div id={detailsId} hidden={!expanded} className="discovery-path-details">
         {path.explanation && <p>{path.explanation}</p>}
+        {path.updatedAt && <p>Path relationships last updated: <SourceTime value={path.updatedAt} /></p>}
         {hasStrength && <p><strong>How strength was calculated</strong>{strength.explanation}</p>}
         <ol>
           {people.slice(0, -1).map((person, i) => <li key={`${person.id}-${i}`}>
             <strong>{person.name} <span aria-hidden="true">→</span> {people[i + 1].name}</strong>
             <p>{edges[i] ? relationshipLabels[edges[i].relationship] : 'Relationship not provided'}{edges[i]?.notes ? `. ${edges[i].notes}` : ''}</p>
             {edges[i]?.evidence && <div className="path-edge-evidence"><p>{edges[i]!.evidence!.statement}</p><p>Source: private CSV · Confirmed by you; not independently verified.</p>
+              {edges[i]!.evidence!.recordNumber && <p>CSV record {edges[i]!.evidence!.recordNumber} (including the header).</p>}
               <p>Observed: <SourceTime value={edges[i]!.evidence!.observedAt} /> · Imported: <SourceTime value={edges[i]!.evidence!.importedAt} /> · Updated: <SourceTime value={edges[i]!.evidence!.updatedAt} /></p></div>}
           </li>)}
         </ol>
@@ -152,6 +174,7 @@ export function DiscoveryResults({ result: initialResult, onNewSearch, onDetails
   const [updatedNetwork, setUpdatedNetwork] = useState<DiscoveryResult>()
   const [refreshing, setRefreshing] = useState(false)
   const [networkError, setNetworkError] = useState('')
+  const [fallbackCheckedAt] = useState(Date.now)
   const result = updatedNetwork ? { ...initialResult, people: updatedNetwork.people, paths: updatedNetwork.paths, connections: updatedNetwork.connections, introduction: updatedNetwork.introduction, connectionStatus: updatedNetwork.connectionStatus } : initialResult
   const remember = (next: DiscoveryResult) => { setUpdatedNetwork(next); onNetworkResult?.({ ...next, companyDetails: initialResult.companyDetails }) }
   const refresh = async () => {
@@ -162,15 +185,18 @@ export function DiscoveryResults({ result: initialResult, onNewSearch, onDetails
     finally { setRefreshing(false) }
   }
   const { company } = result
+  const evidenceCheckedAt = result.introduction?.checkedAt ? Date.parse(result.introduction.checkedAt) : fallbackCheckedAt
   const peopleById = new Map(result.people.filter(person => person.name.trim()).map(person => [person.id, person]))
   if (result.targetPerson?.name.trim()) peopleById.set(result.targetPerson.id, result.targetPerson)
   const resolvedPaths = (result.paths ?? []).flatMap(path => {
     if (path.path.length < 2 || path.path[0] !== path.startPersonId || path.path.at(-1) !== path.targetPersonId || new Set(path.path).size !== path.path.length) return []
-    if (path.source === 'user-import' && (!peopleById.get(path.startPersonId)?.isCurrentUser || !result.introduction?.candidates.some(candidate => candidate.candidateId === path.targetPersonId && candidate.identity?.verification === 'user_confirmed')
+    if (path.source === 'user-import' && (result.introduction?.status !== 'available'
+      || path.path.length - 1 > result.introduction.maxDepth
+      || !peopleById.get(path.startPersonId)?.isCurrentUser || !result.introduction.candidates.some(candidate => candidate.candidateId === path.targetPersonId && candidate.status === 'available' && candidate.identity?.verification === 'user_confirmed')
       || path.connectionIds?.length !== path.path.length - 1 || path.path.slice(0, -1).some((id, index) => !result.connections?.some(edge =>
         edge.id === path.connectionIds![index] && edge.fromPersonId === id && edge.toPersonId === path.path[index + 1]
         && edge.source === 'user-import' && ['direct_connection', 'user_confirmed'].includes(edge.relationship)
-        && edge.evidence?.verification === 'user_confirmed' && edge.evidence.source === 'csv' && edge.evidence.statement.trim().length >= 10)))) return []
+        && eligibleEvidence(edge, evidenceCheckedAt, result.introduction?.maxEvidenceAgeDays ?? 365))))) return []
     const people = path.path.map(id => peopleById.get(id))
     return people.every((person): person is DiscoveryPerson => !!person) ? [{ path, people }] : []
   })
@@ -190,20 +216,24 @@ export function DiscoveryResults({ result: initialResult, onNewSearch, onDetails
           <p className="presentation-eyebrow">Founder & decision-maker candidates</p><div className="discovery-candidates-grid">{targets.length ? targets.map(person => <div className="discovery-target" key={person.id}>
             <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} />
               {companyLoading.searchId && result.introduction?.networkRevision !== undefined && <CandidateNetworkMatch person={person} companyId={company.id} searchId={companyLoading.searchId} revision={result.introduction.networkRevision} identity={result.introduction.candidates.find(candidate => candidate.candidateId === person.id)?.identity} onResult={remember} />}
-              {result.introduction?.candidates.find(candidate => candidate.candidateId === person.id)?.status === 'no_path' && <p>No eligible path to this candidate in your imported network.</p>}
+              <CandidatePathStatus candidate={result.introduction?.candidates.find(candidate => candidate.candidateId === person.id)} />
             </div>
           </div>) : <p>{result.peopleStatus === 'not_configured' ? 'People discovery is not enabled. Company information is still available.' : result.peopleStatus === 'no_candidates' ? 'No founder or decision-maker candidates with matching employment evidence were found in the returned records.' : result.peopleStatus && result.peopleStatus !== 'available' ? 'People discovery could not complete. See the source notes above; company information is still available.' : 'Founders and decision-makers were not included in this result.'}</p>}</div>
       </article>
       <div className="discovery-paths-heading" data-reveal="editorial"><div><p className="presentation-eyebrow">The people between you</p><h2>Your introduction paths<span>.</span></h2></div>{resolvedPaths.length > 0 && <p>{resolvedPaths.length} {resolvedPaths.length === 1 ? 'available path' : 'available paths'}<span>Connection depth follows the supplied path.</span></p>}</div>
       {result.introduction && <div className="network-path-summary"><p>Private network only · Social integrations unavailable · Search limit: {result.introduction.maxDepth} steps, {result.introduction.maxPathsPerCandidate} shortest paths per candidate.</p>
+        {result.introduction.networkStatus === 'not_imported' && <p>Network data has not been imported.</p>}
+        {result.introduction.networkStatus === 'unavailable' && <p>Network availability could not be checked.</p>}
         {result.introduction.networkUpdatedAt && <p>Network last changed: <SourceTime value={result.introduction.networkUpdatedAt} /></p>}
-        {result.introduction.limited && <p>Search or result limits were reached. More paths may exist.</p>}
+        {result.introduction.checkedAt && <p>Paths checked: <SourceTime value={result.introduction.checkedAt} /> · Evidence must be no older than {result.introduction.maxEvidenceAgeDays ?? 365} days at the time of the check.</p>}
+        {result.introduction.limited && <p>{result.introduction.limits?.every(limit => limit === 'path_count')
+          ? 'Additional shortest paths exist. Results are capped per candidate.' : 'Search limits were reached. More paths may exist beyond the searched network.'}</p>}
         {result.introduction.excluded && <p>Excluded relationships: {result.introduction.excluded.follows} follow records, {result.introduction.excluded.unverified} unverified records, {result.introduction.excluded.stale} stale records.</p>}
         <Link className="presentation-inline-action" to="/network">Manage your network ↗</Link>
       </div>}
       {companyLoading.searchId && result.company.source === 'approved-source' && <button className="button button--secondary network-refresh-paths" type="button" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Checking paths…' : 'Refresh introduction paths'}</button>}
       {networkError && <p className="network-error" role="alert">{networkError}</p>}
-      {incompleteCount > 0 && <p className="discovery-result-warnings">{incompleteCount} {incompleteCount === 1 ? 'path is' : 'paths are'} missing complete person details. Only complete paths can be displayed.</p>}
+      {incompleteCount > 0 && <p className="discovery-result-warnings">{incompleteCount} {incompleteCount === 1 ? 'path lacks' : 'paths lack'} complete, eligible evidence or person details. Refresh paths to check your current network.</p>}
       {resolvedPaths.length ? <div className="discovery-path-list">{resolvedPaths.map(({ path, people }, index) => <PathPanel key={path.id} path={path} people={people} connections={result.connections ?? []} index={index} />)}</div> : <div className="discovery-no-paths">
         <span className="discovery-state-symbol" aria-hidden="true">↗</span>
         <h3>{result.paths === null || incompleteCount ? 'Introduction paths are not available yet.' : 'No introduction path found.'}</h3>

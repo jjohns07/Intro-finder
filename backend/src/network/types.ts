@@ -10,6 +10,7 @@ export interface ImportedRelationship {
 export interface RelationshipEvidence {
   source: 'csv'; verification: RelationshipVerification; statement: string
   observedAt: string; importedAt: string; updatedAt: string
+  recordId?: string; importId?: string; recordNumber?: number
 }
 export interface CandidateIdentityEvidence {
   personId: string; name: string; profileUrl?: string
@@ -17,16 +18,21 @@ export interface CandidateIdentityEvidence {
 }
 export type IntroductionStatus = 'available' | 'network_not_imported' | 'candidate_not_identified'
   | 'candidate_provider_error' | 'identity_unresolved' | 'no_path' | 'search_limited' | 'network_error'
+export type GraphLimit = 'depth' | 'path_count' | 'edge_count' | 'target_count' | 'computation'
 export interface IntroductionReport {
   status: IntroductionStatus
   socialIntegration: 'unavailable'
+  networkStatus: 'not_imported' | 'imported' | 'unavailable'
+  checkedAt: string
+  maxEvidenceAgeDays: number
   networkRevision?: number
   networkUpdatedAt?: string
   maxDepth: number
   maxPathsPerCandidate: number
   limited: boolean
+  limits: GraphLimit[]
   excluded?: { follows: number; unverified: number; stale: number }
-  candidates: { candidateId: string; status: 'available' | 'identity_unresolved' | 'no_path' | 'search_limited'; identity?: CandidateIdentityEvidence }[]
+  candidates: { candidateId: string; status: 'available' | 'identity_unresolved' | 'no_path' | 'search_limited'; pathsLimited?: boolean; identity?: CandidateIdentityEvidence }[]
 }
 export class NetworkInputError extends Error {
   constructor(message: string, readonly status = 400) { super(message) }

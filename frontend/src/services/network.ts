@@ -6,9 +6,11 @@ export type IntroductionStatus = 'available' | 'network_not_imported' | 'candida
 export type IdentityEvidence = { personId: string; name: string; profileUrl?: string; verification: 'user_confirmed'; statement: string; confirmedAt: string }
 export type IntroductionReport = {
   status: IntroductionStatus; socialIntegration: 'unavailable'; networkRevision?: number; networkUpdatedAt?: string
+  networkStatus?: 'not_imported' | 'imported' | 'unavailable'; checkedAt?: string; maxEvidenceAgeDays?: number
   maxDepth: number; maxPathsPerCandidate: number; limited: boolean
+  limits?: ('depth' | 'path_count' | 'edge_count' | 'target_count' | 'computation')[]
   excluded?: { follows: number; unverified: number; stale: number }
-  candidates: { candidateId: string; status: 'available' | 'identity_unresolved' | 'no_path' | 'search_limited'; identity?: IdentityEvidence }[]
+  candidates: { candidateId: string; status: 'available' | 'identity_unresolved' | 'no_path' | 'search_limited'; pathsLimited?: boolean; identity?: IdentityEvidence }[]
 }
 export type NetworkStatus = { imported: boolean; revision: number; personCount: number; relationshipCount: number; updatedAt?: string; source: 'csv' | null; socialIntegration: 'unavailable' }
 export type NetworkContact = { localId: string; name: string; title?: string; profileUrl?: string; createdAt?: string; updatedAt?: string }

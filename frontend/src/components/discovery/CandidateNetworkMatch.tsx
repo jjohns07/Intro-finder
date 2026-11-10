@@ -9,14 +9,17 @@ export function CandidateNetworkMatch({ person, companyId, searchId, identity, r
   const [open, setOpen] = useState(false)
   const [contacts, setContacts] = useState<NetworkPeople>()
   const [query, setQuery] = useState('')
+  const [loadedQuery, setLoadedQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState('')
   const [statement, setStatement] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const find = async (q = query) => {
-    setBusy(true); setError(''); setSelected('')
-    try { setContacts(await networkService.people(q)) }
+  const resetConfirmation = () => { setSelected(''); setStatement(''); setConfirmed(false) }
+  const find = async (q = query, nextPage = 1) => {
+    setBusy(true); setError(''); setContacts(undefined); resetConfirmation()
+    try { setContacts(await networkService.people(q, nextPage)); setLoadedQuery(q); setPage(nextPage) }
     catch (error) { setError(error instanceof Error ? error.message : 'Could not load your contacts.') }
     finally { setBusy(false) }
   }
@@ -36,18 +39,22 @@ export function CandidateNetworkMatch({ person, companyId, searchId, identity, r
   }
   return <div className="candidate-network-match">
     {identity && <details className="discovery-evidence"><summary>Identity match: confirmed by you</summary><p>Imported contact: {identity.name}</p><p>{identity.statement}</p><p>Confirmed: <time dateTime={identity.confirmedAt}>{new Date(identity.confirmedAt).toLocaleString()}</time></p>{safeWebUrl(identity.profileUrl) && <a href={safeWebUrl(identity.profileUrl)} target="_blank" rel="noopener noreferrer">Imported contact profile ↗</a>}<button type="button" className="presentation-inline-action" disabled={busy} onClick={() => void clear()}>Remove identity confirmation</button></details>}
-    <button type="button" className="presentation-inline-action" disabled={busy} aria-expanded={open} aria-controls={id} onClick={() => { setOpen(!open); if (!open) void find('') }}>{identity ? 'Change network identity' : 'Match to your network'}</button>
+    <button type="button" className="presentation-inline-action" disabled={busy} aria-expanded={open} aria-controls={id} onClick={() => { setOpen(!open); if (!open) { setQuery(''); void find('') } }}>{identity ? 'Change network identity' : 'Match to your network'}</button>
     {open && <form id={id} className="network-match-form" onSubmit={event => { event.preventDefault(); void save() }}>
       <p>Confirm who this candidate is using your own evidence. Matching names alone is insufficient; Skrapp’s executive list does not supply an individual profile ID.</p>
       <label>Find an imported contact<input value={query} maxLength={100} onChange={event => setQuery(event.target.value)} /></label>
       <button type="button" className="button button--secondary" disabled={busy} onClick={() => void find()}>Search contacts</button>
-      <label>Contact for {person.name}<select value={selected} onChange={event => setSelected(event.target.value)} required disabled={busy}>
+      <label>Contact for {person.name}<select value={selected} onChange={event => { resetConfirmation(); setSelected(event.target.value) }} required disabled={busy}>
         <option value="">Choose a contact</option>{contacts?.people.map(contact => <option key={contact.localId} value={contact.localId}>{contact.name}{contact.title ? ` · ${contact.title}` : ''} · {contact.localId}</option>)}
       </select></label>
-      {contacts && <p>{contacts.people.length} of {contacts.total} matching contacts. Narrow the contact search if needed.</p>}
+      {contacts && <p>{contacts.people.length} of {contacts.total} matching contacts. Page {page} of {Math.max(1, Math.ceil(contacts.total / 50))}.</p>}
+      {contacts && contacts.total > 50 && <div className="network-contact-pages" role="group" aria-label={`Contact pages for ${person.name}`}>
+        <button type="button" className="button button--secondary" disabled={busy || page === 1} onClick={() => void find(loadedQuery, page - 1)}>Previous contacts</button>
+        <button type="button" className="button button--secondary" disabled={busy || page * 50 >= contacts.total} onClick={() => void find(loadedQuery, page + 1)}>Next contacts</button>
+      </div>}
       {selected && safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl) && <a href={safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl)} target="_blank" rel="noopener noreferrer">Inspect selected contact’s profile ↗</a>}
-      <label>Evidence for this identity<textarea value={statement} minLength={10} maxLength={500} required onChange={event => setStatement(event.target.value)} /></label>
-      <label className="network-check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />I confirm this imported contact is {person.name} at the selected company, based on the evidence above.</label>
+      <label>Evidence for this identity<textarea value={statement} minLength={10} maxLength={500} required disabled={busy} onChange={event => { setStatement(event.target.value); setConfirmed(false) }} /></label>
+      <label className="network-check"><input type="checkbox" checked={confirmed} disabled={busy || !selected} onChange={event => setConfirmed(event.target.checked)} />I confirm this imported contact is {person.name} at the selected company, based on the evidence above.</label>
       <button type="submit" className="button button--primary" disabled={!selected || !confirmed || statement.trim().length < 10 || busy}>Confirm identity and find paths</button>
     </form>}
     {busy && <p role="status">Checking your network…</p>}{error && <p className="network-error" role="alert">{error}</p>}
