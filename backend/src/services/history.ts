@@ -99,11 +99,16 @@ export function companyDetailsSnapshot(details: CompanyDetails, companyId: strin
     || !timestampField(details.checkedAt)) throw new Error('Invalid company details')
   if (details.descriptionField && (!['description', 'description_short', 'meta_description'].includes(details.descriptionField)
     || !details.company?.description)) throw new Error('Invalid description source')
+  if (details.profileSource && !['firmographics', 'snapshot'].includes(details.profileSource)) throw new Error('Invalid profile source')
+  if (details.enrichmentStatus && (details.profileSource !== 'snapshot'
+    || !['provider_error', 'provider_timeout', 'rate_limited', 'provider_access_denied', 'quota_exceeded'].includes(details.enrichmentStatus))) throw new Error('Invalid enrichment status')
+  if (details.profileSource === 'snapshot' && (details.descriptionField || details.company?.description)) throw new Error('Snapshot cannot supply a description')
   const snapshot: CompanyDetails = {
     status: details.status, ...(details.company ? { company: companySnapshot(details.company) } : {}),
     checkedAt: details.checkedAt, retrievedAt: timestampField(details.retrievedAt),
     providerUpdatedAt: timestampField(details.providerUpdatedAt), expiresAt: timestampField(details.expiresAt),
     cached: details.cached === true, descriptionField: details.descriptionField,
+    profileSource: details.profileSource, enrichmentStatus: details.enrichmentStatus,
     retryAfterSeconds: integerField(details.retryAfterSeconds, 1, 86_400),
   }
   // MongoDB Mixed updates otherwise serialize nested undefined values as null.

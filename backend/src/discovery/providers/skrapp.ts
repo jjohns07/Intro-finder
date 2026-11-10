@@ -3,7 +3,7 @@ import type { DiscoveryProvider } from '../provider'
 import type { Company, CompanyDetails, CompanyInformationVerification, DiscoveryResult, DiscoverySearchResult, DiscoveryVerification, Person } from '../types'
 import { ProviderError, providerError } from '../errors'
 import { arrayField, integerField, normalizeQuery, object, textField, timestampField } from '../validation'
-import { firmographicsCompany, searchCompany, skrappCompanyId as companyId } from './skrappCompany'
+import { firmographicsCompany, searchCompany, snapshotCompany, skrappCompanyId as companyId } from './skrappCompany'
 
 const PROVIDER = 'Skrapp'
 const COMPANY_LIMIT = 5
@@ -11,8 +11,6 @@ const PEOPLE_LIMIT = 5
 const REFERENCE_COMPANIES = [
   { name: 'Stripe', domain: 'stripe.com', countries: ['united states', 'ireland'] },
   { name: 'BMW Group', domain: 'bmwgroup.com', countries: ['germany'] },
-  { name: 'Shopify', domain: 'shopify.com', countries: ['canada'] },
-  { name: 'Safaricom', domain: 'safaricom.co.ke', countries: ['kenya'] },
 ] as const
 const LIMITATION = 'Skrapp lists this name and title on the company record. Individual identity and original sources were not independently verified; titles may be outdated. Complete employment history is not supplied.'
 
@@ -123,7 +121,7 @@ export class SkrappProvider implements DiscoveryProvider {
   #searchTimes: number[] = []
   #searchDay = ''
   #searchDayUsed = 0
-  #blockedUntil = { search: 0, enrich: 0 }
+  #blockedUntil = { search: 0, enrich: 0, snapshot: 0 }
   #verification: DiscoveryVerification = { status: 'not_run', companySearch: 'not_run', executiveEnrichment: 'not_run' }
   #verificationPromise?: Promise<DiscoveryVerification>
   #companyVerification: CompanyInformationVerification = { status: 'not_run', companies: [] }
@@ -149,7 +147,7 @@ export class SkrappProvider implements DiscoveryProvider {
   get verification(): DiscoveryVerification { return { ...this.#verification } }
   get companyInformationVerification(): CompanyInformationVerification { return structuredClone(this.#companyVerification) }
 
-  private async request(endpoint: 'search' | 'enrich', query: URLSearchParams, signal: AbortSignal, body?: unknown) {
+  private async request(endpoint: 'search' | 'enrich' | 'snapshot', query: URLSearchParams, signal: AbortSignal, body?: unknown) {
     if (!this.available) throw new ProviderError('provider_access_denied')
     if (signal.aborted) throw new ProviderError('provider_timeout')
     const now = Date.now()
@@ -242,14 +240,34 @@ export class SkrappProvider implements DiscoveryProvider {
     return structuredClone(result)
   }
 
-  private async loadCompanyDetails(company: Company): Promise<CompanyDetails> {
+  private async loadCompanyDetails(company: Company, allowSnapshot = true): Promise<CompanyDetails> {
     const now = Date.now()
     this.#companyRequestTimes = this.#companyRequestTimes.filter(time => time > now - 60_000)
     if (this.#companyRequestTimes.length >= 20) throw new ProviderError('rate_limited', Math.ceil((this.#companyRequestTimes[0] + 60_000 - now) / 1000))
     this.#companyRequestTimes.push(now)
     // Only the selected company's one-credit profile category. Never request all.
-    const { body, cacheControl, age } = await this.request('enrich',
-      new URLSearchParams({ id: company.id, categories: 'firmographics' }), AbortSignal.timeout(5_000))
+    let response: Awaited<ReturnType<SkrappProvider['request']>>
+    try {
+      response = await this.request('enrich',
+        new URLSearchParams({ id: company.id, categories: 'firmographics' }), AbortSignal.timeout(5_000))
+    } catch (error) {
+      const failure = providerError(error)
+      // Snapshot remains free after the enrichment trial or credits run out.
+      // Do not add requests on timeouts, rate limits or malformed responses.
+      if (!allowSnapshot || !['quota_exceeded', 'provider_access_denied'].includes(failure.code)) throw failure
+      try {
+        const { body } = await this.request('snapshot', new URLSearchParams({ id: company.id }), AbortSignal.timeout(4_000))
+        const retrievedAt = new Date().toISOString()
+        return { status: 'available', company: snapshotCompany(body, company, retrievedAt),
+          profileSource: 'snapshot', enrichmentStatus: failure.code,
+          checkedAt: retrievedAt, retrievedAt, cached: false }
+      } catch {
+        // Keep the original category failure visible; no failed or fallback
+        // response is cached. Search results remain available to the caller.
+        throw failure
+      }
+    }
+    const { body, cacheControl, age } = response
     const data = categoryData(body, company.id, 'firmographics', 1)
     const retrievedAt = new Date().toISOString()
     let ttl = this.#companyCacheTtlSeconds
@@ -259,6 +277,7 @@ export class SkrappProvider implements DiscoveryProvider {
     ttl = Math.max(0, ttl - (/^\d+$/.test(age ?? '') ? Number(age) : 0))
     const result: CompanyDetails = {
       status: data === null ? 'unavailable' : 'available',
+      profileSource: 'firmographics',
       ...(data === null ? {} : firmographicsCompany(data, company, retrievedAt)),
       checkedAt: retrievedAt, retrievedAt, providerUpdatedAt: timestampField(body.last_updated_at), cached: false,
       ...(ttl > 0 ? { expiresAt: new Date(Date.now() + ttl * 1000).toISOString() } : {}),
@@ -330,7 +349,9 @@ export class SkrappProvider implements DiscoveryProvider {
         const matchesDomain = (company: Company) => company.domain === reference.domain
           || Boolean(company.website && new URL(company.website).hostname.replace(/^www\./, '') === reference.domain)
         if (!matchesDomain(company)) { report.status = 'needs_review'; continue }
-        const profile = await this.getCompanyDetails(company, { signal, refresh: true })
+        // Two companies × (one search + one category request): at most FOUR
+        // upstream attempts per explicit verification. No fallback or retries.
+        const profile = await this.loadCompanyDetails(company, false)
         if (profile.status !== 'available' || !profile.company) { report.status = 'no_data'; continue }
         if (profile.company.domain && !matchesDomain(profile.company)) { report.status = 'needs_review'; continue }
         const country = profile.company.country ?? company.country

@@ -23,7 +23,7 @@ export function DiscoveryMatches({ matches, total, matchMode, onNewSearch, ...co
       {total > matches.length && <p>Showing {matches.length} of {total} matches. Use a more specific company name to narrow your search.</p>}
       <div className="discovery-match-options">{matches.map(({ company }) => <button type="button" key={company.id} aria-pressed={selected === company.id} onClick={() => setSelected(company.id)}>
         <strong>{company.name}</strong>
-        <span>{[company.industry, company.location].filter(Boolean).join(' · ') || 'Location and industry not supplied'}</span>
+        <span>{[company.industry, company.location, company.country && !company.location?.toLowerCase().includes(company.country.toLowerCase()) ? company.country : undefined].filter(Boolean).join(' · ') || 'Location and industry not supplied'}</span>
         <span>{safeWebUrl(company.website) ? new URL(safeWebUrl(company.website)!).hostname : 'Website not supplied'}</span>
         <small>{company.attribution?.provider || 'Provider result'} · {company.id}</small>
       </button>)}</div>

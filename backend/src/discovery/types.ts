@@ -89,6 +89,9 @@ export interface CompanyDetails {
   providerUpdatedAt?: string
   expiresAt?: string
   cached: boolean
+  profileSource?: 'firmographics' | 'snapshot'
+  // A free snapshot can succeed while the description-bearing category fails.
+  enrichmentStatus?: ProviderFailure
   descriptionField?: 'description' | 'description_short' | 'meta_description'
   retryAfterSeconds?: number
 }

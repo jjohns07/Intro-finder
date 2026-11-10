@@ -16,13 +16,13 @@ test('LIVE Skrapp company search and executive enrichment (up to three credits)'
   assert.ok(result.executiveCount && result.executiveCount > 0)
 })
 
-test('LIVE company profiles across four countries and industries (up to four credits)', { skip: process.env.RUN_LIVE_COMPANY_INFORMATION !== 'true' }, async () => {
+test('LIVE company profiles in two countries and industries (at most four requests, two credits)', { skip: process.env.RUN_LIVE_COMPANY_INFORMATION !== 'true' }, async () => {
   const provider = createDiscoveryProvider()
   assert.equal(provider.name, 'skrapp')
   assert.ok(provider.available, 'Skrapp credentials are missing from the backend environment.')
   assert.ok(provider.verifyCompanyInformation)
   const report = await provider.verifyCompanyInformation()
-  assert.equal(report.companies.length, 4)
+  assert.equal(report.companies.length, 2)
   for (const company of report.companies) {
     assert.equal(company.status, 'passed', `${company.name}: ${company.status}`)
     assert.equal(company.description, 'available')

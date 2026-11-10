@@ -37,10 +37,10 @@ export function createDiscoveryProvider(env: NodeJS.ProcessEnv = process.env): D
 }
 
 export function shouldVerifyOnStartup(provider: DiscoveryProvider, env: NodeJS.ProcessEnv = process.env) {
-  return env.RENDER === 'true' && env.SKRAPP_VERIFY_ON_STARTUP !== 'false'
+  return env.RENDER === 'true' && env.SKRAPP_VERIFY_ON_STARTUP === 'true'
     && provider.name === 'skrapp' && provider.available && Boolean(provider.verifyConnection)
 }
 
 export function shouldVerifyCompanyInformationOnStartup(provider: DiscoveryProvider, env: NodeJS.ProcessEnv = process.env) {
-  return shouldVerifyOnStartup(provider, env) && env.SKRAPP_VERIFY_COMPANY_INFORMATION !== 'false' && Boolean(provider.verifyCompanyInformation)
+  return shouldVerifyOnStartup(provider, env) && env.SKRAPP_VERIFY_COMPANY_INFORMATION === 'true' && Boolean(provider.verifyCompanyInformation)
 }

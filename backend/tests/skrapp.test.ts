@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SkrappProvider } from '../src/discovery/providers/skrapp'
-import { createDiscoveryProvider, shouldVerifyOnStartup } from '../src/discovery/provider'
+import { createDiscoveryProvider, shouldVerifyCompanyInformationOnStartup, shouldVerifyOnStartup } from '../src/discovery/provider'
 import { permittedSnapshot } from '../src/services/history'
 
 // Deliberately fake credentials and records; none of these tests contact Skrapp.
@@ -257,7 +257,11 @@ test('concurrent verification shares one execution, and automatic verification i
   assert.deepEqual(first, second)
   assert.equal(requests.length, 2)
   assert.equal(shouldVerifyOnStartup(provider, {}), false)
-  assert.equal(shouldVerifyOnStartup(provider, { RENDER: 'true' }), true)
+  assert.equal(shouldVerifyOnStartup(provider, { RENDER: 'true' }), false)
+  assert.equal(shouldVerifyOnStartup(provider, { RENDER: 'true', SKRAPP_VERIFY_ON_STARTUP: 'true' }), true)
   assert.equal(shouldVerifyOnStartup(provider, { RENDER: 'true', SKRAPP_VERIFY_ON_STARTUP: 'false' }), false)
   assert.equal(shouldVerifyOnStartup(createDiscoveryProvider({}), { RENDER: 'true' }), false)
+  assert.equal(shouldVerifyCompanyInformationOnStartup(provider, { RENDER: 'true', SKRAPP_VERIFY_ON_STARTUP: 'true' }), false)
+  assert.equal(shouldVerifyCompanyInformationOnStartup(provider, { RENDER: 'true', SKRAPP_VERIFY_COMPANY_INFORMATION: 'true' }), false)
+  assert.equal(shouldVerifyCompanyInformationOnStartup(provider, { RENDER: 'true', SKRAPP_VERIFY_ON_STARTUP: 'true', SKRAPP_VERIFY_COMPANY_INFORMATION: 'true' }), true)
 })

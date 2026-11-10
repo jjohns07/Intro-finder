@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { CompanyMark } from '../dashboard/CompanyMark'
-import { safeWebUrl, type DiscoveryCompany, type DiscoveryCompanyDetails, type DiscoveryService } from '../../services/discovery'
+import { mergeCompanyInformation, safeWebUrl, type DiscoveryCompany, type DiscoveryCompanyDetails, type DiscoveryService } from '../../services/discovery'
 
 export type CompanyInformationProps = {
   company: DiscoveryCompany
@@ -26,8 +26,8 @@ function SourceDate({ value }: { value?: string }) {
     : <>Date not supplied</>
 }
 
-function Fact({ label, children }: { label: string; children?: ReactNode }) {
-  return <div><dt>{label}</dt><dd>{children ?? <span className="discovery-missing-field">Not provided</span>}</dd></div>
+function Fact({ label, children, missingLabel = 'Not provided' }: { label: string; children?: ReactNode; missingLabel?: string }) {
+  return <div><dt>{label}</dt><dd>{children ?? <span className="discovery-missing-field">{missingLabel}</span>}</dd></div>
 }
 
 function ExternalLink({ url, children }: { url?: string; children: ReactNode }) {
@@ -41,6 +41,7 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
   const [loading, setLoading] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [expanded, setExpanded] = useState(false)
+  const [viewedAt, setViewedAt] = useState(() => Date.now())
   const request = useRef<AbortController | null>(null)
   const canLoad = Boolean(searchId && loadDetails && searchCompany.source === 'approved-source' && searchCompany.attribution?.provider === 'Skrapp')
 
@@ -54,6 +55,7 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
       const next = await loadDetails(searchId, searchCompany.id, { signal: controller.signal, refresh })
       if (controller.signal.aborted || request.current !== controller) return
       setDetails(next)
+      setViewedAt(Date.now())
       setLoading(false)
       onDetailsChange?.(searchCompany.id, next)
     } catch (error) {
@@ -73,14 +75,16 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
 
   // Profile and search are separate source snapshots. Only supplied profile
   // values override the original card; a failed refresh retains its dated data.
-  const company: DiscoveryCompany = { ...searchCompany, ...Object.fromEntries(Object.entries(details?.company ?? {}).filter(([, value]) => value != null)) }
+  const company = mergeCompanyInformation(searchCompany, details?.company)
   const website = safeWebUrl(company.website)
   const profile = safeWebUrl(company.profileUrl)
   const source = company.attribution?.provider || 'Data provider'
   const description = company.description
-  const collapsible = Boolean(description && (description.length > 560 || description.split('\n').length > 6))
-  const preview = description && collapsible && !expanded ? description.slice(0, 560).replace(/\s+\S*$/, '') + '…' : description
-  const failure = requestError || (details ? failures[details.status] : undefined)
+  const collapsible = Boolean(description && (description.length > 200 || description.split('\n').length > 6))
+  const preview = description && collapsible && !expanded ? description.split('\n').slice(0, 6).join('\n').slice(0, 560).replace(/\s+\S*$/, '') + '…' : description
+  const failure = requestError || (details ? failures[details.status] || (details.enrichmentStatus && failures[details.enrichmentStatus]) : undefined)
+  const missingLabel = loading ? 'Loading…' : failure && details?.profileSource !== 'snapshot' ? 'Could not retrieve' : 'Not provided'
+  const expired = details?.expiresAt && Date.parse(details.expiresAt) <= viewedAt
   const location = company.location || [...new Set([company.city, company.region, company.country].filter(Boolean))].join(', ') || undefined
   const missingDescription = loading ? 'Loading company description…'
     : failure ? 'A company description could not be retrieved.'
@@ -88,30 +92,30 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
         : `A company description was not provided by ${source}.`
 
   return <article className="discovery-company" data-reveal aria-labelledby={`${id}-heading`}>
-    <header className="discovery-company-top"><p className="presentation-eyebrow">Company overview</p><span className="discovery-company-source"><span aria-hidden="true" />{source}</span></header>
+    <header className="discovery-company-top"><p className="presentation-eyebrow">Company overview</p><span className="discovery-company-source"><span aria-hidden="true" />{source}{details?.profileSource === 'snapshot' ? ' · Company snapshot' : ''}</span></header>
     <div className="discovery-company-grid">
       <section className="discovery-company-summary" aria-label="Company overview">
         <div className="discovery-company-identity"><CompanyMark name={company.name} logoUrl={safeWebUrl(company.logoUrl)} /><h2 id={`${id}-heading`}>{company.name}</h2></div>
         <div className="discovery-description-block">
-          <p id={`${id}-description`} className="discovery-company-description" data-expanded={expanded || undefined}>{preview || <span className="discovery-missing-field">{missingDescription}</span>}</p>
+          <p id={`${id}-description`} className="discovery-company-description" data-collapsible={collapsible || undefined} data-expanded={expanded || undefined} tabIndex={expanded ? 0 : undefined} aria-label={expanded ? 'Full company description' : undefined}>{preview || <span className="discovery-missing-field">{missingDescription}</span>}</p>
           {collapsible && <button className="presentation-inline-action discovery-description-toggle" type="button" aria-expanded={expanded} aria-controls={`${id}-description`} onClick={() => setExpanded(value => !value)}>{expanded ? 'Show less' : 'Read full description'} <span aria-hidden="true">{expanded ? '−' : '+'}</span></button>}
           {description && <p className="discovery-description-source">{details?.descriptionField === 'meta_description' ? 'Website description via ' : 'Description from '}{source}</p>}
         </div>
         <dl className="discovery-company-facts discovery-overview-facts">
-          <Fact label="Industry">{company.industry}</Fact>
-          <Fact label="Country">{company.country}</Fact>
-          <Fact label="Headquarters">{location}</Fact>
+          <Fact label="Industry" missingLabel={missingLabel}>{company.industry}</Fact>
+          <Fact label="Country" missingLabel={missingLabel}>{company.country}</Fact>
+          <Fact label="Headquarters" missingLabel={missingLabel}>{location}</Fact>
         </dl>
       </section>
       <section className="discovery-company-details" aria-labelledby={`${id}-details-heading`}>
         <h3 id={`${id}-details-heading`}>Company details</h3>
         <dl className="discovery-company-facts">
-          <Fact label="Official website">{website ? <ExternalLink url={website}>{new URL(website).hostname}</ExternalLink> : undefined}</Fact>
-          <Fact label="Employee range">{company.employeeRange}</Fact>
-          <Fact label="Company domain">{company.domain}</Fact>
-          <Fact label="City">{company.city}</Fact>
-          <Fact label="State / region">{company.region}</Fact>
-          <Fact label="Company LinkedIn">{profile ? <ExternalLink url={profile}>View company profile</ExternalLink> : undefined}</Fact>
+          <Fact label="Official website" missingLabel={missingLabel}>{website ? <ExternalLink url={website}>{new URL(website).hostname}</ExternalLink> : undefined}</Fact>
+          <Fact label="Employee range" missingLabel={missingLabel}>{company.employeeRange}</Fact>
+          <Fact label="Company domain" missingLabel={missingLabel}>{company.domain}</Fact>
+          <Fact label="City" missingLabel={missingLabel}>{company.city}</Fact>
+          <Fact label="State / region" missingLabel={missingLabel}>{company.region}</Fact>
+          <Fact label="Company LinkedIn" missingLabel={missingLabel}>{profile ? <ExternalLink url={profile}>View company profile</ExternalLink> : undefined}</Fact>
           {typeof company.linkedinEmployeeCount === 'number' && <Fact label="People listed on LinkedIn"><span>{new Intl.NumberFormat().format(company.linkedinEmployeeCount)}</span><small>Provider count of LinkedIn members; may differ from total employees.</small></Fact>}
           {company.legalName && <Fact label="Legal name">{company.legalName}</Fact>}
           {company.companyType && <Fact label="Company type">{company.companyType}</Fact>}
@@ -122,18 +126,21 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
     </div>
     <div aria-live="polite" aria-atomic="true" className="discovery-company-feedback">
       {loading && <p role="status"><span className="discovery-spinner" aria-hidden="true" />{details ? 'Refreshing company information…' : 'Loading company information…'}</p>}
-      {!loading && failure && <p role="alert">{failure} {details?.company ? 'Previously retrieved details remain visible with their original source date.' : 'The company match and executive results are still available.'}</p>}
+      {!loading && failure && <p role="alert">{failure} {details?.status === 'available' && details.profileSource === 'snapshot' ? 'Basic details were retrieved from Skrapp’s company snapshot. Its snapshot does not include descriptions.' : details?.company ? 'Previously retrieved details remain visible with their original source date.' : 'The company match and executive results are still available.'}</p>}
       {!loading && !failure && details?.status === 'unavailable' && <p>The provider returned no additional company information. Available search details are shown above.</p>}
+      {!loading && !failure && expired && <p>These company details are past their cache lifetime. Refresh company information to check for updates.</p>}
     </div>
     <footer className="discovery-company-footer">
       <div>
         <p className="discovery-source-note">{details?.cached ? 'Cached company information' : details?.retrievedAt ? 'Company information retrieved' : 'Company match retrieved'} · <SourceDate value={details?.retrievedAt ?? searchCompany.attribution?.retrievedAt} /></p>
         <details className="discovery-company-sources"><summary>Company information sources</summary>
           <p>Company match: {searchCompany.attribution?.provider || 'Source not supplied'} · <SourceDate value={searchCompany.attribution?.retrievedAt} /></p>
-          {details?.retrievedAt && <p>Company profile: {details.company?.attribution?.provider || source} · <SourceDate value={details.retrievedAt} /></p>}
+          {details?.retrievedAt && <p>Company profile: {details.company?.attribution?.provider || source}{details.profileSource === 'snapshot' ? ' · Snapshot' : details.profileSource === 'firmographics' ? ' · Firmographics' : ''} · <SourceDate value={details.retrievedAt} /></p>}
+          {details?.enrichmentStatus && <p>Detailed profile request: {failures[details.enrichmentStatus]}</p>}
+          {details?.expiresAt && <p>Cache expires: <SourceDate value={details.expiresAt} /></p>}
           {details?.providerUpdatedAt && <p>Last updated by the provider: <SourceDate value={details.providerUpdatedAt} /></p>}
           {company.attribution && <p>Source record: {company.attribution.recordId}</p>}
-          <p>Company information is supplied by the provider and may change. Fields not supplied are marked “Not provided”.</p>
+          <p>Company information is supplied by the provider and may change. Fields not supplied are marked “Not provided”. Available search fields are used when the profile does not supply them; headquarters fields are kept together from one source.</p>
         </details>
       </div>
       {canLoad && <button type="button" className="button button--secondary discovery-company-refresh" disabled={loading} onClick={() => void load(true)}><span aria-hidden="true">↻</span> Refresh company information</button>}

@@ -30,7 +30,7 @@ export function searchCompany(value: unknown, retrievedAt: string): Company {
 }
 
 // Field names below are from the v3 firmographics category, not the search or
-// snapshot schemas: https://skrapp.io/api#cat-firmographics (reviewed 2026-11-09).
+// snapshot schemas: https://skrapp.io/api#cat-firmographics (reviewed 2026-11-10).
 export function firmographicsCompany(value: unknown, base: Company, retrievedAt: string) {
   const row = object(value)
   const country = textField(row.hq_country, 200), city = textField(row.hq_city, 200), region = textField(row.hq_state, 200)
@@ -52,4 +52,16 @@ export function firmographicsCompany(value: unknown, base: Company, retrievedAt:
     attribution: { provider: 'Skrapp', recordId: base.id, retrievedAt, reliability: 'aggregated-provider-data' },
   }
   return { company, descriptionField }
+}
+
+// The free snapshot is a flat object, not an enrichment category. Project only
+// its documented fields; it does not supply a description or a LinkedIn count.
+// https://skrapp.io/api#company-snapshot (reviewed 2026-11-10).
+export function snapshotCompany(value: unknown, base: Company, retrievedAt: string): Company {
+  const row = object(value)
+  if (skrappCompanyId(row.id) !== base.id) throw new ProviderError('provider_error')
+  textField(row.company_name, 200, true)
+  const fields = ['company_name', 'domain', 'website', 'linkedin_url', 'company_logo', 'industry', 'type',
+    'employees_range', 'hq_location', 'hq_country', 'hq_state', 'hq_city', 'founded_year', 'activity_status']
+  return firmographicsCompany(Object.fromEntries(fields.map(field => [field, row[field]])), base, retrievedAt).company
 }

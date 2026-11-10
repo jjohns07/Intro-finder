@@ -154,7 +154,8 @@ test('cache expiry and provider no-store, no-cache, max-age and Age restrictions
 
 test('failed refreshes invalidate cache and are never recorded as a successful empty profile', async () => {
   for (const [status, code] of [[401, 'provider_access_denied'], [402, 'quota_exceeded'], [429, 'rate_limited'], [500, 'provider_error'], [504, 'provider_timeout']] as const) {
-    const api = mock([response({ description: 'Old.' }), new Response(KEY, { status }), response({ description: 'New.' })])
+    const api = mock([response({ description: 'Old.' }), new Response(KEY, { status }),
+      ...([401, 402].includes(status) ? [new Response(KEY, { status: 503 })] : []), response({ description: 'New.' })])
     await api.details()
     await assert.rejects(api.details(true), (error: any) => error.code === code && !error.message.includes(KEY))
     if (status !== 429) assert.equal((await api.details()).company?.description, 'New.')
@@ -182,4 +183,77 @@ test('snapshot validation rejects mismatched profile attribution and strips arbi
   assert.throws(() => companyDetailsSnapshot({ ...details, company: { ...details.company!, attribution: { ...details.company!.attribution!, recordId: 'other' } } }, base.id))
   const snapshot = companyDetailsSnapshot({ ...details, company: { ...details.company!, metadata: { secret: KEY } } }, base.id)
   assert.equal(snapshot.company?.metadata, undefined)
+})
+
+// The flat snapshot example from https://skrapp.io/api#company-snapshot.
+const stripeSnapshot = { id: base.id, company_name: 'Stripe', domain: 'stripe.com', domain_region: null,
+  website: 'https://www.stripe.com', linkedin_url: 'https://www.linkedin.com/company/stripe',
+  company_logo: 'https://logos-cdn.skrapp.io/logos/stripe.com', industry: 'Technology, Information and Internet',
+  employees_range: '10,001+', revenue_range: 'gte_10b', revenue_range_formatted: '10B+ USD',
+  hq_location: 'South San Francisco, California, United States', hq_country: 'United States',
+  hq_state: 'California', hq_city: 'South San Francisco', type: 'Privately Held', founded_year: 2010, activity_status: 'Active' }
+
+test('credit/trial failures use the free flat snapshot while retaining the description failure', async () => {
+  for (const [status, failure] of [[402, 'quota_exceeded'], [403, 'provider_access_denied']] as const) {
+    const api = mock([new Response(KEY, { status }), json({ ...stripeSnapshot, description: 'Undocumented field', linkedin_employees_count: 99 })])
+    const details = companyDetailsSnapshot(await api.details(), base.id)
+    assert.equal(details.status, 'available'); assert.equal(details.enrichmentStatus, failure)
+    assert.equal(details.profileSource, 'snapshot'); assert.equal(details.company?.description, undefined)
+    assert.equal(details.company?.linkedinEmployeeCount, undefined)
+    assert.equal(details.company?.country, 'United States'); assert.equal(details.company?.city, 'South San Francisco')
+    assert.equal(details.company?.region, 'California'); assert.equal(details.company?.employeeRange, '10,001+')
+    assert.equal(details.company?.logoUrl, stripeSnapshot.company_logo)
+    assert.equal(details.expiresAt, undefined); assert.equal(details.cached, false)
+    assert.equal(api.requests.length, 2)
+    assert.equal(api.requests[1].url.pathname, '/api/v3/companies/snapshot')
+    assert.equal(api.requests[1].url.search, '?id=' + base.id)
+    assert.equal(api.requests[1].options?.method, 'GET')
+    assert.equal(new Headers(api.requests[1].options?.headers).get('X-Access-Key'), KEY)
+    assert.ok(!JSON.stringify(details).includes(KEY))
+  }
+})
+
+test('a mismatched snapshot cannot replace the selected company and failed snapshots keep the original error', async () => {
+  for (const fallback of [json({ ...stripeSnapshot, id: '123' }), json({ ...stripeSnapshot, id: Number(base.id) }),
+    new Response(null, { status: 404 }), new Response(KEY, { status: 429 })]) {
+    const api = mock([new Response(null, { status: 402 }), fallback])
+    await assert.rejects(api.details(), { code: 'quota_exceeded' })
+    assert.equal(api.requests.length, 2)
+  }
+})
+
+test('snapshot fallback is not retained in the provider cache; refresh can recover a real description', async () => {
+  const api = mock([new Response(null, { status: 402 }), json(stripeSnapshot), response(stripeExample)])
+  assert.equal((await api.details()).profileSource, 'snapshot')
+  const recovered = await api.details()
+  assert.equal(recovered.profileSource, 'firmographics'); assert.equal(recovered.enrichmentStatus, undefined)
+  assert.equal(recovered.company?.description, stripeExample.description_short)
+  assert.equal(api.requests.length, 3)
+})
+
+test('snapshot provenance and description claims are validated before saving history', () => {
+  const details = { status: 'available' as const, company: base, profileSource: 'snapshot' as const,
+    enrichmentStatus: 'quota_exceeded' as const, checkedAt: new Date().toISOString(), cached: false }
+  assert.equal(companyDetailsSnapshot(details, base.id).enrichmentStatus, 'quota_exceeded')
+  assert.throws(() => companyDetailsSnapshot({ ...details, company: { ...base, description: 'Not in snapshot schema' } }, base.id))
+  assert.throws(() => companyDetailsSnapshot({ ...details, profileSource: 'firmographics' }, base.id))
+  assert.throws(() => companyDetailsSnapshot({ ...details, profileSource: 'unknown' as any }, base.id))
+})
+
+test('explicit company verification uses at most four requests across two countries, with no fallback', async () => {
+  const bmwId = '1234567890123456789'
+  const rows = [
+    json({ results: [{ internal_id: base.id, name: 'Stripe', domain: 'stripe.com' }], meta: { total_all: 1 } }),
+    response({ ...stripeExample, hq_country: 'United States' }),
+    json({ results: [{ internal_id: bmwId, name: 'BMW Group', domain: 'bmwgroup.com' }], meta: { total_all: 1 } }),
+    json({ id: bmwId, total_cost: 1, categories: { firmographics: { cost: 1, data: {
+      company_name: 'BMW Group', domain: 'bmwgroup.com', hq_country: 'Germany', industry: 'Test industry', description: 'Test fixture description.' } } } }),
+  ]
+  const api = mock(rows)
+  assert.equal((await api.provider.verifyCompanyInformation()).status, 'passed')
+  assert.equal(api.requests.length, 4)
+  assert.ok(api.requests.every(request => !request.url.pathname.endsWith('/snapshot')))
+  const failure = mock([json({ results: [{ internal_id: base.id, name: 'Stripe', domain: 'stripe.com' }], meta: { total_all: 1 } }), new Response(null, { status: 402 })])
+  assert.equal((await failure.provider.verifyCompanyInformation()).companies[0].status, 'quota_exceeded')
+  assert.equal(failure.requests.length, 2, 'Stop immediately on quota failure')
 })

@@ -53,6 +53,8 @@ export type DiscoveryCompanyDetails = {
   providerUpdatedAt?: string
   expiresAt?: string
   cached: boolean
+  profileSource?: 'firmographics' | 'snapshot'
+  enrichmentStatus?: 'provider_error' | 'provider_timeout' | 'rate_limited' | 'provider_access_denied' | 'quota_exceeded'
   descriptionField?: 'description' | 'description_short' | 'meta_description'
   retryAfterSeconds?: number
 }
@@ -121,13 +123,47 @@ export const companyDiscovery: DiscoveryService = {
       method: 'POST', signal, body: JSON.stringify({ searchId, companyId, refresh }),
     })
     if (!details || !['available', 'unavailable', 'not_configured', 'provider_error', 'provider_timeout', 'rate_limited', 'provider_access_denied', 'quota_exceeded'].includes(details.status)
-      || !Number.isFinite(Date.parse(details.checkedAt))
+      || typeof details.checkedAt !== 'string' || !Number.isFinite(Date.parse(details.checkedAt)) || typeof details.cached !== 'boolean'
       || (details.status === 'available' && !details.company)
-      || (details.company && (details.company.id !== companyId || typeof details.company.name !== 'string' || details.company.source !== 'approved-source'))) {
+      || (details.status === 'unavailable' && details.company)
+      || (details.company && (details.company.id !== companyId || !validCompany(details.company)))
+      || (details.profileSource !== undefined && !['firmographics', 'snapshot'].includes(details.profileSource))
+      || (details.enrichmentStatus !== undefined && (details.profileSource !== 'snapshot'
+        || !['provider_error', 'provider_timeout', 'rate_limited', 'provider_access_denied', 'quota_exceeded'].includes(details.enrichmentStatus)))
+      || (details.profileSource === 'snapshot' && (details.company?.description || details.descriptionField))
+      || (details.descriptionField !== undefined && (!['description', 'description_short', 'meta_description'].includes(details.descriptionField) || !details.company?.description))
+      || ['retrievedAt', 'providerUpdatedAt', 'expiresAt'].some(field => {
+        const value = details[field as keyof DiscoveryCompanyDetails]
+        return value !== undefined && (typeof value !== 'string' || !Number.isFinite(Date.parse(value)))
+      })) {
       throw new ApiError('The server returned invalid company information. Please try again.', 502)
     }
     return details
   },
+}
+
+function validCompany(company: DiscoveryCompany) {
+  return typeof company.name === 'string' && Boolean(company.name.trim()) && company.source === 'approved-source'
+    && ['description', 'industry', 'website', 'logoUrl', 'location', 'country', 'city', 'region', 'domain', 'employeeRange',
+      'legalName', 'companyType', 'activityStatus', 'profileUrl'].every(field => {
+      const value = company[field as keyof DiscoveryCompany]
+      return value === undefined || typeof value === 'string'
+    })
+    && (company.linkedinEmployeeCount === undefined || (Number.isSafeInteger(company.linkedinEmployeeCount) && company.linkedinEmployeeCount >= 0))
+    && (company.foundedYear === undefined || (Number.isSafeInteger(company.foundedYear) && company.foundedYear > 0 && company.foundedYear <= 9999))
+    && (company.attribution === undefined || (company.attribution?.recordId === company.id
+      && typeof company.attribution.provider === 'string' && Number.isFinite(Date.parse(company.attribution.retrievedAt))
+      && company.attribution.reliability === 'aggregated-provider-data'))
+}
+
+export function mergeCompanyInformation(search: DiscoveryCompany, profile?: DiscoveryCompany): DiscoveryCompany {
+  if (!profile || profile.id !== search.id) return search
+  const company = { ...search, ...Object.fromEntries(Object.entries(profile).filter(([, value]) => value != null)) }
+  // Headquarters is one source record. Mixing an old city/address with a newer
+  // country or region can display a location neither response ever supplied.
+  const headquarters = ['country', 'city', 'region', 'location'] as const
+  if (headquarters.some(field => profile[field])) headquarters.forEach(field => { company[field] = profile[field] })
+  return company
 }
 
 function isSavedFailure(value: unknown): value is SavedSearch {

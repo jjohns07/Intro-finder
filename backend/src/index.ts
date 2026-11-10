@@ -29,15 +29,15 @@ async function startServer(): Promise<void> {
     app.listen(port, () => {
       console.log(`Intro Finder API listening on port ${port}`)
       if (shouldVerifyOnStartup(provider)) {
-        void provider.verifyConnection?.().then(async verification => {
+        // Run one explicitly enabled probe, never both. Company verification
+        // uses at most four requests; connection verification uses at most two.
+        if (shouldVerifyCompanyInformationOnStartup(provider)) {
+          void provider.verifyCompanyInformation!().then(information => {
+            console.info('Skrapp company information verification:', JSON.stringify(information))
+          }).catch(() => { console.error('Skrapp company information verification could not complete.') })
+        } else void provider.verifyConnection?.().then(verification => {
           // The report contains only fixed statuses, a count and a timestamp.
           console.info('Skrapp discovery API verification:', verification)
-          if (verification.companySearch === 'passed' && shouldVerifyCompanyInformationOnStartup(provider)) {
-            // Free Render plans can inspect this report in logs or /api/health;
-            // no Shell access, user searches, or credentials in the report.
-            const information = await provider.verifyCompanyInformation!()
-            console.info('Skrapp company information verification:', JSON.stringify(information))
-          }
         }).catch(() => {
           console.error('Skrapp discovery API verification could not complete.')
         })

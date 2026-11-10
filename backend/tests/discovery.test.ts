@@ -264,6 +264,27 @@ test('refresh failures preserve the dated profile and remain distinct from unava
   assert.equal(empty.status, 'unavailable'); assert.equal(empty.company, undefined)
 })
 
+test('snapshot fallback and its description failure survive history, then refresh recovers the detailed profile', async () => {
+  run = async () => ({ matches: [sample], total: 1, matchMode: 'exact' })
+  runDetails = async company => ({ status: 'available', company: { ...company, country: 'Nigeria' },
+    profileSource: 'snapshot', enrichmentStatus: 'quota_exceeded', cached: false,
+    checkedAt: new Date().toISOString(), retrievedAt: new Date().toISOString() })
+  const record = await (await post('Test Company', 'profile-snapshot-key')).json()
+  const snapshot = await (await details(record.id)).json()
+  assert.equal(snapshot.profileSource, 'snapshot'); assert.equal(snapshot.enrichmentStatus, 'quota_exceeded')
+  const saved = await (await get('/api/history/' + record.id)).json()
+  assert.deepEqual(saved.result.companyDetails, snapshot)
+  assert.equal(saved.result.companyDetails.company.description, undefined)
+  assert.equal(saved.outcome, 'success')
+  assert.deepEqual(saved.result.people, record.result.people)
+  runDetails = async company => ({ ...profileFor(company), profileSource: 'firmographics' })
+  const refreshed = await (await details(record.id, sample.company.id, true)).json()
+  assert.equal(refreshed.profileSource, 'firmographics'); assert.equal(refreshed.enrichmentStatus, undefined)
+  assert.ok(refreshed.company.description)
+  const restored = await (await get('/api/history/' + record.id)).json()
+  assert.deepEqual(restored.result.companyDetails, refreshed)
+})
+
 test('concurrent profile loads share one execution and deletion during enrichment is respected', async () => {
   run = async () => ({ matches: [sample], total: 1, matchMode: 'exact' })
   const record = await (await post('Test Company', 'profile-delete-key')).json()

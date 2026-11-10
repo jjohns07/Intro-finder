@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { CompanyInformation } from '../components/discovery/CompanyInformation'
 import { DiscoveryMatches } from '../components/discovery/DiscoveryResults'
 import { SavedSearchPage } from '../components/account/SavedSearchPage'
-import { companyDiscovery, type DiscoveryCompany, type DiscoveryCompanyDetails, type DiscoveryResult } from '../services/discovery'
+import { companyDiscovery, type DiscoveryCompany, type DiscoveryCompanyDetails, type DiscoveryResult, type DiscoveryService } from '../services/discovery'
 import { searchHistoryService, type SavedSearch } from '../services/history'
 
 const company: DiscoveryCompany = { id: '8342903258370330161', name: 'Test Company', source: 'approved-source',
@@ -100,7 +100,7 @@ it('cancels an obsolete selection and ignores late responses for another company
 
 it('refresh bypasses the cache without another search, disables duplicate clicks and keeps old details on failure', async () => {
   let complete!: (value: DiscoveryCompanyDetails) => void
-  const load = vi.fn(() => new Promise<DiscoveryCompanyDetails>(resolve => { complete = resolve }))
+  const load = vi.fn<NonNullable<DiscoveryService['getCompanyDetails']>>(() => new Promise<DiscoveryCompanyDetails>(resolve => { complete = resolve }))
   render(<DiscoveryMatches matches={[{ ...result, companyDetails: { ...profile, cached: true } }]} total={1} onNewSearch={() => {}} searchId="saved-1" loadDetails={load} />)
   expect(load).not.toHaveBeenCalled()
   expect(screen.getByText(/Cached company information/)).toBeTruthy()
@@ -159,4 +159,59 @@ it('profile API sends the stored JWT and exact company ID, and rejects a mismatc
   expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ searchId: 'saved-1', companyId: company.id, refresh: true })
   expect(fetcher.mock.calls[0][1].cache).toBe('no-store')
   await expect(companyDiscovery.getCompanyDetails!('saved-1', company.id, options)).rejects.toThrow('invalid company information')
+})
+
+it('shows a successful basic snapshot separately from its failed description request', () => {
+  render(<CompanyInformation company={company} initialDetails={{ ...profile, company: { ...company, employeeRange: '11-50' },
+    profileSource: 'snapshot', enrichmentStatus: 'quota_exceeded', descriptionField: undefined }} />)
+  expect(screen.getByText('Skrapp · Company snapshot')).toBeTruthy()
+  expect(screen.getByText('Nigeria')).toBeTruthy()
+  expect(screen.getByText('11-50')).toBeTruthy()
+  expect(screen.getByText('A company description could not be retrieved.')).toBeTruthy()
+  expect(screen.getByRole('alert').textContent).toContain('no company information credits')
+  expect(screen.getByRole('alert').textContent).toContain('Basic details were retrieved')
+  expect(screen.queryByText(/description was not provided/)).toBeNull()
+})
+
+it('does not combine headquarters fields from different source snapshots', () => {
+  const { rerender } = render(<CompanyInformation company={{ ...company, location: 'Lagos, Nigeria' }}
+    initialDetails={{ ...profile, company: { id: company.id, name: company.name, source: 'approved-source', country: 'Canada', city: 'Ottawa' } }} />)
+  expect(screen.getByText('Ottawa, Canada')).toBeTruthy()
+  expect(screen.queryByText('Lagos')).toBeNull()
+  expect(screen.queryByText('Nigeria')).toBeNull()
+  rerender(<CompanyInformation key="address-only" company={company}
+    initialDetails={{ ...profile, company: { id: company.id, name: company.name, source: 'approved-source', location: 'Provider-supplied full address' } }} />)
+  expect(screen.getByText('Provider-supplied full address')).toBeTruthy()
+  expect(screen.queryByText('Nigeria')).toBeNull()
+})
+
+it('marks an expired profile for refresh without spending another request from Search History', () => {
+  const load = vi.fn()
+  render(<CompanyInformation company={company} initialDetails={{ ...profile, expiresAt: '2020-01-01T00:00:00.000Z', cached: true }} searchId="saved-1" loadDetails={load} autoLoadDetails={false} />)
+  expect(screen.getByText(/past their cache lifetime/)).toBeTruthy()
+  expect(load).not.toHaveBeenCalled()
+})
+
+it('limits descriptions with many short lines and makes the expanded text keyboard accessible', () => {
+  render(<CompanyInformation company={company} initialDetails={{ ...profile, company: { ...company, description: 'One line.\n'.repeat(50) } }} />)
+  const expand = screen.getByRole('button', { name: /Read full description/ })
+  const content = document.getElementById(expand.getAttribute('aria-controls')!)!
+  expect(content.textContent!.split('\n').length).toBeLessThanOrEqual(6)
+  fireEvent.click(expand)
+  expect(content.getAttribute('tabindex')).toBe('0')
+  expect(content.textContent!.split('\n').length).toBe(51)
+})
+
+it('rejects malformed optional profile fields and unsupported snapshot descriptions', async () => {
+  for (const invalid of [
+    { ...profile, company: { ...company, country: { name: 'Nigeria' } } },
+    { ...profile, company: { ...company, linkedinEmployeeCount: -1 } },
+    { ...profile, company: { ...company, description: ['unexpected'] } },
+    { ...profile, profileSource: 'snapshot' },
+    { ...profile, enrichmentStatus: 'quota_exceeded' },
+    { ...profile, expiresAt: 'invalid date' },
+  ]) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(invalid))))
+    await expect(companyDiscovery.getCompanyDetails!('saved-1', company.id, { signal: new AbortController().signal })).rejects.toThrow('invalid company information')
+  }
 })
