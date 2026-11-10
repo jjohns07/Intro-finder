@@ -6,7 +6,8 @@ import type { DiscoveryProvider } from '../discovery/provider'
 import type { CompanyMatchMode, DiscoveryResult } from '../discovery/types'
 import { ProviderError, providerError } from '../discovery/errors'
 import { validQuery } from '../discovery/validation'
-import { historyDetail, normalizeCompanyName, permittedSnapshot, settleInterruptedSearches } from '../services/history'
+import { normalizeCompanyName, permittedSnapshot, settleInterruptedSearches } from '../services/history'
+import { historyWithIntroductions } from '../services/historyIntroductions'
 
 type Outcome = 'success' | 'ambiguous' | 'no_matches' | 'invalid_query' | 'provider_unavailable' | ProviderError['code']
 const responseStatus = (outcome: string | null | undefined) => ({ invalid_query: 400, provider_unavailable: 503,
@@ -40,7 +41,7 @@ export function executeDiscovery(provider: DiscoveryProvider) {
         res.status(409).json({ message: 'This request key belongs to a different search.' }); return
       }
       if (existing.retryAfterSeconds) res.set('Retry-After', String(existing.retryAfterSeconds))
-      res.status(existing.status === 'pending' ? 202 : responseStatus(existing.outcome)).json(historyDetail(existing)); return
+      res.status(existing.status === 'pending' ? 202 : responseStatus(existing.outcome)).json(await historyWithIntroductions(existing, req.user!)); return
     }
 
     let matches: DiscoveryResult[] = []
@@ -83,6 +84,6 @@ export function executeDiscovery(provider: DiscoveryProvider) {
     } }, { returnDocument: 'after', runValidators: true })
     if (!saved) { res.status(409).json({ message: 'This search was removed or interrupted before it completed.' }); return }
     if (retryAfterSeconds) res.set('Retry-After', String(retryAfterSeconds))
-    res.status(completed ? 201 : responseStatus(outcome)).json(historyDetail(saved))
+    res.status(completed ? 201 : responseStatus(outcome)).json(await historyWithIntroductions(saved, req.user!))
   }
 }

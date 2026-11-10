@@ -2,7 +2,8 @@ import mongoose from 'mongoose'
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth'
 import SearchHistory, { type HistoryDocument } from '../models/SearchHistory'
-import { historySummary, historyDetail, settleInterruptedSearches } from '../services/history'
+import { historySummary, settleInterruptedSearches } from '../services/history'
+import { historyWithIntroductions } from '../services/historyIntroductions'
 
 function pageNumber(value: unknown, fallback: number, maximum: number) {
   if (value === undefined) return fallback
@@ -42,7 +43,7 @@ export async function getHistory(req: AuthenticatedRequest, res: Response) {
   await settleInterruptedSearches(req.user!.id)
   const record = await SearchHistory.findOne({ _id: req.params.id, user: req.user!.id })
   if (!record) { res.status(404).json({ message: 'Saved search not found.' }); return }
-  res.json(historyDetail(record))
+  res.json(await historyWithIntroductions(record, req.user!))
 }
 
 export async function deleteHistory(req: AuthenticatedRequest, res: Response) {

@@ -1,4 +1,5 @@
 import { AnimatedMetric } from './AnimatedMetric'
+import { Link } from 'react-router-dom'
 import type { NetworkDistribution, PlatformIntegration } from './data'
 
 const currentIntegrations: readonly PlatformIntegration[] = [
@@ -24,7 +25,8 @@ export function NetworkSection({ integrations = currentIntegrations, connectionC
         <div><dt>Active integrations</dt><dd><AnimatedMetric value={activeCount} /></dd></div>
         <div><dt>Available connections</dt><dd>{connectionCount == null ? <><span aria-hidden="true">—</span><span className="sr-only">Not available</span></> : <AnimatedMetric value={connectionCount} />}</dd></div>
       </dl>
-      {!activeCount && <p className="presentation-data-note">No platforms are connected. Network statistics will appear when an integration becomes available.</p>}
+      {!activeCount && <p className="presentation-data-note">No social platforms are connected. You can import authorised relationship data privately using CSV.</p>}
+      <Link className="presentation-inline-action" to="/network">Manage imported connections ↗</Link>
     </div>
     <div className="network-platform-panel">
       <figure className="network-platform-map">

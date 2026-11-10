@@ -1,8 +1,9 @@
 import { ApiError, apiRequest } from './api'
 import type { SavedSearch } from './history'
+import type { IntroductionReport, IntroductionStatus } from './network'
 
 // The server owns discovery execution, provenance and saved snapshots.
-export type DiscoverySource = 'approved-source' | 'local-fixture' | 'disabled'
+export type DiscoverySource = 'approved-source' | 'local-fixture' | 'disabled' | 'user-import'
 
 export type DiscoveryPerson = {
   id: string
@@ -14,6 +15,8 @@ export type DiscoveryPerson = {
   source: DiscoverySource
   isFixture?: boolean
   isCurrentUser?: boolean
+  importedAt?: string
+  updatedAt?: string
   evidence?: readonly {
     provider: string; recordId: string; field: string; companyId: string; title: string
     affiliation: 'current' | 'historical' | 'unknown'
@@ -67,6 +70,11 @@ export type DiscoveryPath = {
   explanation?: string
   source: DiscoverySource
   isFixture?: boolean
+  connectionIds?: readonly string[]
+  steps?: number
+  intermediateCount?: number
+  updatedAt?: string
+  oldestEvidenceAt?: string
   // Raw backend confidence is not a calculated path-strength score.
   calculatedStrength?: { score: number; explanation: string }
 }
@@ -75,9 +83,10 @@ export type DiscoveryConnection = {
   id: string
   fromPersonId: string
   toPersonId: string
-  relationship: 'direct' | 'warm' | 'introduced' | 'vouched' | 'unknown'
+  relationship: 'direct' | 'warm' | 'introduced' | 'vouched' | 'unknown' | 'direct_connection' | 'follows' | 'mutual_follow' | 'user_confirmed'
   notes?: string
   source: DiscoverySource
+  evidence?: { source: 'csv'; verification: 'unverified' | 'user_confirmed'; statement: string; observedAt: string; importedAt: string; updatedAt: string }
 }
 
 export type DiscoveryResult = {
@@ -94,7 +103,8 @@ export type DiscoveryResult = {
   warnings?: readonly string[]
   peopleStatus?: 'available' | 'no_candidates' | 'not_configured' | 'rate_limited' | 'provider_error' | 'provider_timeout' | 'provider_access_denied' | 'quota_exceeded'
   peopleTruncated?: boolean
-  connectionStatus?: 'unavailable'
+  connectionStatus?: 'unavailable' | IntroductionStatus
+  introduction?: IntroductionReport
 }
 
 export type DiscoveryService = {

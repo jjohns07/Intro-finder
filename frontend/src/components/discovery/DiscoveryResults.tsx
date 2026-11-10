@@ -1,7 +1,10 @@
 import { useCallback, useId, useState, type CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
 import { isDemonstration, safeWebUrl, type DiscoveryCompanyDetails, type DiscoveryConnection, type DiscoveryPath, type DiscoveryPerson, type DiscoveryResult } from '../../services/discovery'
 import { CompanyInformation, type CompanyInformationProps } from './CompanyInformation'
+import { CandidateNetworkMatch } from './CandidateNetworkMatch'
+import { networkService, type IntroductionStatus } from '../../services/network'
 
 type CompanyLoadingProps = Pick<CompanyInformationProps, 'searchId' | 'loadDetails' | 'autoLoadDetails'>
 
@@ -11,10 +14,13 @@ export function DiscoveryMatches({ matches, total, matchMode, onNewSearch, ...co
   const ambiguous = total > 1 || matchMode === 'prefix' || matchMode === 'relevance'
   const [selected, setSelected] = useState<string | null>(ambiguous ? null : matches[0]?.company.id ?? null)
   const [profiles, setProfiles] = useState(() => new Map<string, DiscoveryCompanyDetails>())
+  const [networks, setNetworks] = useState(() => new Map<string, DiscoveryResult>())
   const rememberDetails = useCallback((companyId: string, details: DiscoveryCompanyDetails) => {
     setProfiles(previous => new Map(previous).set(companyId, details))
   }, [])
-  const active = matches.find(match => match.company.id === selected)
+  const rememberNetwork = useCallback((result: DiscoveryResult) => { setNetworks(previous => new Map(previous).set(result.company.id, result)) }, [])
+  const found = matches.find(match => match.company.id === selected)
+  const active = found ? networks.get(found.company.id) ?? found : undefined
   return <>
     {ambiguous && <section className="discovery-match-picker" aria-labelledby="company-matches-heading">
       <p className="presentation-eyebrow">Possible company matches</p>
@@ -28,7 +34,7 @@ export function DiscoveryMatches({ matches, total, matchMode, onNewSearch, ...co
         <small>{company.attribution?.provider || 'Provider result'} · {company.id}</small>
       </button>)}</div>
     </section>}
-    {active && <DiscoveryResults key={active.company.id} result={profiles.has(active.company.id) ? { ...active, companyDetails: profiles.get(active.company.id) } : active} onNewSearch={onNewSearch} onDetailsChange={rememberDetails} {...companyLoading} />}
+    {active && <DiscoveryResults key={active.company.id} result={profiles.has(active.company.id) ? { ...active, companyDetails: profiles.get(active.company.id) } : active} onNewSearch={onNewSearch} onDetailsChange={rememberDetails} onNetworkResult={rememberNetwork} {...companyLoading} />}
   </>
 }
 
@@ -60,6 +66,22 @@ function PersonPortrait({ person }: { person: DiscoveryPerson }) {
 
 const relationshipLabels: Record<DiscoveryConnection['relationship'], string> = {
   direct: 'Direct connection', warm: 'Warm connection', introduced: 'Introduced', vouched: 'Vouched connection', unknown: 'Relationship not provided',
+  direct_connection: 'Direct connection · user-confirmed', user_confirmed: 'Personal relationship · user-confirmed', follows: 'Follows only', mutual_follow: 'Mutual follow only',
+}
+
+function SourceTime({ value }: { value?: string }) {
+  return value && Number.isFinite(Date.parse(value)) ? <time dateTime={value} title="UTC date">{new Date(value).toLocaleDateString(undefined, { timeZone: 'UTC' })}</time> : <>Date unavailable</>
+}
+
+const pathReasons: Record<IntroductionStatus, string> = {
+  available: 'Paths use evidenced relationships in your private network. An introduction still requires everyone involved to agree.',
+  network_not_imported: 'No private network has been imported. Import your authorised connection CSV to begin. LinkedIn and X network integrations are unavailable.',
+  candidate_not_identified: 'No founder or executive candidate was identified in the returned company records. Company information remains available.',
+  candidate_provider_error: 'The provider could not retrieve founder or executive candidates, so there is no candidate to connect to yet.',
+  identity_unresolved: 'Confirm which imported contact is this founder or executive. Matching names alone cannot establish an identity.',
+  no_path: 'No eligible path was found to the confirmed candidate identities in your imported network. Follows, mutual follows, unverified records and evidence older than 365 days are excluded.',
+  search_limited: 'No path was found within the bounded search. The search stops at four steps and may omit longer paths.',
+  network_error: 'Your network could not be checked or changed during this request. Refresh paths to try again; your company and candidate information remains available.',
 }
 
 function PathPanel({ path, people, connections, index }: {
@@ -71,12 +93,12 @@ function PathPanel({ path, people, connections, index }: {
   const strength = path.calculatedStrength
   const hasStrength = strength && Number.isFinite(strength.score) && strength.score >= 0 && strength.score <= 1 && strength.explanation.trim()
   const edges = people.slice(0, -1).map((person, i) => connections.find(connection =>
-    connection.fromPersonId === person.id && connection.toPersonId === people[i + 1].id))
+    (!path.connectionIds || connection.id === path.connectionIds[i]) && connection.fromPersonId === person.id && connection.toPersonId === people[i + 1].id))
   return (
     <article className="discovery-path" data-reveal="path" style={{ '--path-delay': `${Math.min(index, 4) * 70}ms` } as CSSProperties} aria-labelledby={`${detailsId}-heading`}>
       <header className="discovery-path-heading">
         <div><p className="presentation-eyebrow">Path {String(index + 1).padStart(2, '0')}</p><h3 id={`${detailsId}-heading`}>A way to {target.name}</h3></div>
-        <span className="discovery-depth">{people.length - 1} {people.length === 2 ? 'step' : 'steps'}</span>
+        <span className="discovery-depth">{people.length - 1} {people.length === 2 ? 'step' : 'steps'} · {people.length - 2} {people.length === 3 ? 'intermediary' : 'intermediaries'}</span>
       </header>
       <ol className="discovery-person-path" data-long={people.length > 4 || undefined} aria-label={`Introduction path to ${target.name}`}>
         {people.map((person, i) => <li key={`${person.id}-${i}`} style={{ '--node-index': Math.min(i, 6) } as CSSProperties}>
@@ -85,6 +107,12 @@ function PathPanel({ path, people, connections, index }: {
             <PersonPortrait person={person} />
             <strong>{person.name}</strong>
             {(person.title || person.role) && <p>{person.title || person.role}</p>}
+            <details className="path-person-details"><summary>Inspect {person.name}</summary>
+              <p>{person.isCurrentUser ? 'Your authenticated account identity.' : person.source === 'user-import' ? 'Contact from your private CSV import.' : 'Candidate supplied by the company data provider.'}</p>
+              {person.importedAt && <p>Imported: <SourceTime value={person.importedAt} /></p>}
+              {person.updatedAt && <p>Updated: <SourceTime value={person.updatedAt} /></p>}
+              {safeWebUrl(person.profileUrl) ? <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View profile ↗</a> : <p>Profile link not provided.</p>}
+            </details>
           </div>
           {i < people.length - 1 && <div className="discovery-edge">
             <svg viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5h98m-5-4 5 4-5 4" pathLength="1" /></svg>
@@ -93,7 +121,7 @@ function PathPanel({ path, people, connections, index }: {
         </li>)}
       </ol>
       <footer className="discovery-path-footer">
-        <span>{hasStrength ? `Calculated path strength · ${Math.round(strength.score * 100)}%` : 'Path strength not available'}</span>
+        <span>{path.source === 'user-import' ? <>Oldest relationship evidence · <SourceTime value={path.oldestEvidenceAt} /></> : hasStrength ? `Calculated path strength · ${Math.round(strength.score * 100)}%` : 'Path strength not available'}</span>
         <button className="presentation-inline-action" type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded(!expanded)}>{expanded ? 'Close path details' : 'Explore this path'}<span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
       </footer>
       <div id={detailsId} hidden={!expanded} className="discovery-path-details">
@@ -103,27 +131,46 @@ function PathPanel({ path, people, connections, index }: {
           {people.slice(0, -1).map((person, i) => <li key={`${person.id}-${i}`}>
             <strong>{person.name} <span aria-hidden="true">→</span> {people[i + 1].name}</strong>
             <p>{edges[i] ? relationshipLabels[edges[i].relationship] : 'Relationship not provided'}{edges[i]?.notes ? `. ${edges[i].notes}` : ''}</p>
+            {edges[i]?.evidence && <div className="path-edge-evidence"><p>{edges[i]!.evidence!.statement}</p><p>Source: private CSV · Confirmed by you; not independently verified.</p>
+              <p>Observed: <SourceTime value={edges[i]!.evidence!.observedAt} /> · Imported: <SourceTime value={edges[i]!.evidence!.importedAt} /> · Updated: <SourceTime value={edges[i]!.evidence!.updatedAt} /></p></div>}
           </li>)}
         </ol>
         <div className="discovery-profile-links">{people.map(person => {
           const url = safeWebUrl(person.profileUrl)
           return url ? <a key={person.id} href={url} target="_blank" rel="noopener noreferrer">View {person.name}’s profile <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a> : null
         })}</div>
-        <p className="discovery-source-note">{path.source === 'local-fixture' || path.isFixture ? 'Demonstration path — not a real introduction.' : path.source === 'approved-source' ? 'Path supplied by an approved data source.' : 'Path source is unavailable.'} An introduction still requires the people involved to agree.</p>
+        <p className="discovery-source-note">{path.source === 'local-fixture' || path.isFixture ? 'Demonstration path — not a real introduction.' : path.source === 'user-import' ? 'Path calculated from your confirmed CSV relationships. Trust and willingness to introduce have not been independently verified.' : path.source === 'approved-source' ? 'Path supplied by an approved data source.' : 'Path source is unavailable.'} An introduction still requires the people involved to agree.</p>
       </div>
     </article>
   )
 }
 
-export function DiscoveryResults({ result, onNewSearch, onDetailsChange, ...companyLoading }: {
-  result: DiscoveryResult; onNewSearch: () => void; onDetailsChange?: CompanyInformationProps['onDetailsChange']
+export function DiscoveryResults({ result: initialResult, onNewSearch, onDetailsChange, onNetworkResult, ...companyLoading }: {
+  result: DiscoveryResult; onNewSearch: () => void; onDetailsChange?: CompanyInformationProps['onDetailsChange']; onNetworkResult?: (result: DiscoveryResult) => void
 } & CompanyLoadingProps) {
   const revealRef = useSectionReveal()
+  const [updatedNetwork, setUpdatedNetwork] = useState<DiscoveryResult>()
+  const [refreshing, setRefreshing] = useState(false)
+  const [networkError, setNetworkError] = useState('')
+  const result = updatedNetwork ? { ...initialResult, people: updatedNetwork.people, paths: updatedNetwork.paths, connections: updatedNetwork.connections, introduction: updatedNetwork.introduction, connectionStatus: updatedNetwork.connectionStatus } : initialResult
+  const remember = (next: DiscoveryResult) => { setUpdatedNetwork(next); onNetworkResult?.({ ...next, companyDetails: initialResult.companyDetails }) }
+  const refresh = async () => {
+    if (!companyLoading.searchId || refreshing) return
+    setRefreshing(true); setNetworkError('')
+    try { remember(await networkService.refreshPaths(companyLoading.searchId, result.company.id)) }
+    catch (error) { setNetworkError(error instanceof Error ? error.message : 'Could not refresh introduction paths.') }
+    finally { setRefreshing(false) }
+  }
   const { company } = result
   const peopleById = new Map(result.people.filter(person => person.name.trim()).map(person => [person.id, person]))
   if (result.targetPerson?.name.trim()) peopleById.set(result.targetPerson.id, result.targetPerson)
   const resolvedPaths = (result.paths ?? []).flatMap(path => {
     if (path.path.length < 2 || path.path[0] !== path.startPersonId || path.path.at(-1) !== path.targetPersonId || new Set(path.path).size !== path.path.length) return []
+    if (path.source === 'user-import' && (!peopleById.get(path.startPersonId)?.isCurrentUser || !result.introduction?.candidates.some(candidate => candidate.candidateId === path.targetPersonId && candidate.identity?.verification === 'user_confirmed')
+      || path.connectionIds?.length !== path.path.length - 1 || path.path.slice(0, -1).some((id, index) => !result.connections?.some(edge =>
+        edge.id === path.connectionIds![index] && edge.fromPersonId === id && edge.toPersonId === path.path[index + 1]
+        && edge.source === 'user-import' && ['direct_connection', 'user_confirmed'].includes(edge.relationship)
+        && edge.evidence?.verification === 'user_confirmed' && edge.evidence.source === 'csv' && edge.evidence.statement.trim().length >= 10)))) return []
     const people = path.path.map(id => peopleById.get(id))
     return people.every((person): person is DiscoveryPerson => !!person) ? [{ path, people }] : []
   })
@@ -141,15 +188,26 @@ export function DiscoveryResults({ result, onNewSearch, onDetailsChange, ...comp
       {!!result.warnings?.length && <div className="discovery-result-warnings"><strong>Source notes</strong><ul>{result.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
       <article className="discovery-people" aria-label="Founder and decision-maker candidates">
           <p className="presentation-eyebrow">Founder & decision-maker candidates</p><div className="discovery-candidates-grid">{targets.length ? targets.map(person => <div className="discovery-target" key={person.id}>
-            <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} /></div>
+            <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} />
+              {companyLoading.searchId && result.introduction?.networkRevision !== undefined && <CandidateNetworkMatch person={person} companyId={company.id} searchId={companyLoading.searchId} revision={result.introduction.networkRevision} identity={result.introduction.candidates.find(candidate => candidate.candidateId === person.id)?.identity} onResult={remember} />}
+              {result.introduction?.candidates.find(candidate => candidate.candidateId === person.id)?.status === 'no_path' && <p>No eligible path to this candidate in your imported network.</p>}
+            </div>
           </div>) : <p>{result.peopleStatus === 'not_configured' ? 'People discovery is not enabled. Company information is still available.' : result.peopleStatus === 'no_candidates' ? 'No founder or decision-maker candidates with matching employment evidence were found in the returned records.' : result.peopleStatus && result.peopleStatus !== 'available' ? 'People discovery could not complete. See the source notes above; company information is still available.' : 'Founders and decision-makers were not included in this result.'}</p>}</div>
       </article>
       <div className="discovery-paths-heading" data-reveal="editorial"><div><p className="presentation-eyebrow">The people between you</p><h2>Your introduction paths<span>.</span></h2></div>{resolvedPaths.length > 0 && <p>{resolvedPaths.length} {resolvedPaths.length === 1 ? 'available path' : 'available paths'}<span>Connection depth follows the supplied path.</span></p>}</div>
+      {result.introduction && <div className="network-path-summary"><p>Private network only · Social integrations unavailable · Search limit: {result.introduction.maxDepth} steps, {result.introduction.maxPathsPerCandidate} shortest paths per candidate.</p>
+        {result.introduction.networkUpdatedAt && <p>Network last changed: <SourceTime value={result.introduction.networkUpdatedAt} /></p>}
+        {result.introduction.limited && <p>Search or result limits were reached. More paths may exist.</p>}
+        {result.introduction.excluded && <p>Excluded relationships: {result.introduction.excluded.follows} follow records, {result.introduction.excluded.unverified} unverified records, {result.introduction.excluded.stale} stale records.</p>}
+        <Link className="presentation-inline-action" to="/network">Manage your network ↗</Link>
+      </div>}
+      {companyLoading.searchId && result.company.source === 'approved-source' && <button className="button button--secondary network-refresh-paths" type="button" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Checking paths…' : 'Refresh introduction paths'}</button>}
+      {networkError && <p className="network-error" role="alert">{networkError}</p>}
       {incompleteCount > 0 && <p className="discovery-result-warnings">{incompleteCount} {incompleteCount === 1 ? 'path is' : 'paths are'} missing complete person details. Only complete paths can be displayed.</p>}
       {resolvedPaths.length ? <div className="discovery-path-list">{resolvedPaths.map(({ path, people }, index) => <PathPanel key={path.id} path={path} people={people} connections={result.connections ?? []} index={index} />)}</div> : <div className="discovery-no-paths">
         <span className="discovery-state-symbol" aria-hidden="true">↗</span>
         <h3>{result.paths === null || incompleteCount ? 'Introduction paths are not available yet.' : 'No introduction path found.'}</h3>
-        <p>{result.paths === null ? 'Company and people discovery is separate from connection discovery. No relationship source is connected, so we cannot establish a warm introduction. A social follow does not establish a trusted relationship.' : incompleteCount ? 'The source needs to provide the people along each path before you can explore it.' : `We found ${company.name}, but no path was returned in the available network data. Try another company to continue exploring.`}</p>
+        <p>{incompleteCount ? 'Some paths lack complete people, identity confirmation or relationship evidence and cannot be displayed.' : result.introduction ? pathReasons[result.introduction.status] : result.paths === null ? 'Company and people discovery is separate from connection discovery. No relationship source is connected, so we cannot establish a warm introduction. A social follow does not establish a trusted relationship.' : `We found ${company.name}, but no path was returned in the available network data. Try another company to continue exploring.`}</p>
         <button type="button" className="presentation-inline-action" onClick={onNewSearch}>Search another company <span aria-hidden="true">↗</span></button>
       </div>}
     </section>

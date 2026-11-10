@@ -23,7 +23,7 @@ export function FindIntroductionsPage({ user, logo, onLogout }: {
       <DashboardHeader name={user.name} email={user.email} logo={logo} onLogout={onLogout} brandHref="/dashboard" context="Find introductions" links={[
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/find-introductions', label: 'Find introductions' },
-        { href: '/dashboard#your-network', label: 'Your network' },
+        { href: '/network', label: 'Your network' },
         { href: '/dashboard#activity', label: 'Recent searches' },
         { href: '/history', label: 'Search history' },
         { href: '/settings', label: 'Settings' },

@@ -8,6 +8,7 @@ import './styles/discovery.css'
 import './styles/account.css'
 import './styles/motion.css'
 import './styles/project.css'
+import './styles/network.css'
 import { AppFooter } from './components/AppFooter'
 import { AboutProjectPage } from './components/account/AboutProjectPage'
 import { PageTransition } from './components/motion/PageTransition'
@@ -15,6 +16,7 @@ import { SearchHistoryPage } from './components/account/SearchHistoryPage'
 import { SavedSearchPage } from './components/account/SavedSearchPage'
 import { API_BASE_URL as API_ORIGIN, getStoredToken, setStoredToken, clearStoredToken, getAuthHeaders } from './services/api'
 import { SettingsPage } from './components/account/SettingsPage'
+import { NetworkPage } from './components/account/NetworkPage'
 import { FindIntroductionsPage } from './components/discovery/FindIntroductionsPage'
 import { DashboardHeader } from './components/dashboard/DashboardHeader'
 import { OverviewSection } from './components/dashboard/OverviewSection'
@@ -364,7 +366,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
             { href: '#overview', label: 'Overview' },
             { href: '/find-introductions', label: 'Find introductions' },
             { href: '#momentum', label: 'Network activity' },
-            { href: '#your-network', label: 'Your network' },
+            { href: '/network', label: 'Your network' },
             { href: '#activity', label: 'Recent searches' },
             { href: '#network-paths', label: 'Introduction opportunities' },
             { href: '#discover', label: 'Your next move' },
@@ -495,6 +497,7 @@ function App() {
         <Route path="/history" element={<ProtectedRoute user={currentUser}><SearchHistoryPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="/history/:id" element={<ProtectedRoute user={currentUser}><SavedSearchPage key={currentUser?.id} user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute user={currentUser}><SettingsPage user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
+        <Route path="/network" element={<ProtectedRoute user={currentUser}><NetworkPage key={currentUser?.id} user={currentUser!} logo={<LogoMark compact />} onLogout={() => { clearStoredToken(); setCurrentUser(null) }} /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
       </Routes>
       </PageTransition>

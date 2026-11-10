@@ -11,6 +11,8 @@ import type { DiscoveryProvider } from '../src/discovery/provider'
 import { ProviderError } from '../src/discovery/errors'
 import type { Company, CompanyDetails, DiscoveryResult } from '../src/discovery/types'
 import { SkrappProvider } from '../src/discovery/providers/skrapp'
+import { CandidateIdentity, NetworkPerson, NetworkRelationship, NetworkState, initializeNetworkIndexes } from '../src/models/Network'
+import { CSV_COLUMNS } from '../src/network/csv'
 
 let mongo: MongoMemoryServer, server: Server, base: string, token: string, otherToken: string
 let calls = 0
@@ -40,6 +42,7 @@ before(async () => {
   mongo = await MongoMemoryServer.create({ binary: { downloadDir: '/tmp/intro-finder-mongodb', version: process.env.MONGOMS_VERSION ?? '7.0.24' }, instance: { storageEngine: 'wiredTiger' } })
   await mongoose.connect(mongo.getUri())
   await SearchHistory.init()
+  await initializeNetworkIndexes()
   const users = await User.create([{ name: 'Test User', email: 'test@example.com', password: 'test-password' }, { name: 'Other User', email: 'other@example.com', password: 'test-password' }])
   token = generateToken(String(users[0]._id), users[0].email)
   otherToken = generateToken(String(users[1]._id), users[1].email)
@@ -313,4 +316,147 @@ test('legacy result-only history remains readable and can receive a company prof
   assert.equal(restored.result.company.name, sample.company.name)
   assert.equal(restored.result.companyDetails.status, 'available')
   assert.deepEqual(restored.matches, [])
+})
+
+// All network data below is synthetic test data in isolated MongoDB, never a
+// production import or a claim of real-world relationships.
+const networkCandidate = { id: 'fixture-founder-candidate', name: 'Fixture Founder', title: 'Co-founder', role: 'founder' as const, source: 'approved-source' as const }
+const networkExecutive = { id: 'fixture-executive-candidate', name: 'Fixture Executive', title: 'CEO', role: 'executive' as const, source: 'approved-source' as const }
+const csvEdge = (from: string, to: string, type = 'direct_connection', verification = 'user_confirmed') => [from, from === 'me' ? '' : `Fixture ${from}`, '', to, to === 'me' ? '' : `Fixture ${to}`, '', type, verification, 'Synthetic test relationship with supporting fixture evidence.', new Date().toISOString().slice(0, 10)].join(',')
+const csvNetwork = (...rows: string[]) => CSV_COLUMNS.join(',') + '\n' + rows.join('\n')
+const networkRequest = (path: string, method = 'GET', body?: unknown, auth = token) => fetch(`${base}/api/${path}`, {
+  method, headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+})
+const csvImport = (csv: string, revision = 0, auth = token, confirm = true) => fetch(`${base}/api/network/import`, {
+  method: 'POST', headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'text/csv', 'X-Network-Revision': String(revision), 'X-Import-Confirmed': String(confirm) }, body: csv,
+})
+async function resetNetworks() {
+  await Promise.all([NetworkState.deleteMany({}), NetworkPerson.deleteMany({}), NetworkRelationship.deleteMany({}), CandidateIdentity.deleteMany({})])
+}
+async function networkSearch(key: string, auth = token) {
+  run = async () => ({ matches: [{ ...sample, people: [networkCandidate, networkExecutive], peopleStatus: 'available' }], total: 1, matchMode: 'exact' })
+  return (await post('Test Company', key, auth)).json()
+}
+const matchIdentity = (searchId: string, candidateId: string, personId: string, revision: number, auth = token) => networkRequest('network/candidate-links', 'POST', {
+  searchId, companyId: sample.company.id, candidateId, personId, revision, confirmed: true, statement: 'Synthetic fixture confirms this is the same candidate identity.',
+}, auth)
+
+test('private network API requires JWT, validates CSV and confirmation before writes, and does not accept client ownership', async () => {
+  await resetNetworks()
+  assert.equal((await networkRequest('network', 'GET', undefined, '')).status, 401)
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'founder')), 0, token, false)).status, 400)
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'founder'), csvEdge('me', 'founder')))).status, 400)
+  assert.equal((await csvImport(CSV_COLUMNS.join(',') + ',owner\n' + csvEdge('me', 'founder') + ',another-account')).status, 400)
+  assert.equal(await NetworkRelationship.countDocuments(), 0)
+  const preview = await fetch(`${base}/api/network/preview`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/csv' }, body: csvNetwork(csvEdge('me', 'founder')) })
+  assert.equal(preview.status, 200); assert.equal((await preview.json()).personCount, 1)
+  assert.equal(await NetworkRelationship.countDocuments(), 0, 'Preview never writes the graph')
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'founder')))).status, 201)
+  const people = await (await networkRequest('network/people')).json()
+  assert.equal(people.people[0].localId, 'founder'); assert.equal(people.people[0].name, 'Fixture founder')
+  assert.equal(people.people[0].owner, undefined)
+  assert.equal((await (await networkRequest('network', 'GET', undefined, otherToken)).json()).imported, false)
+  assert.equal((await (await networkRequest('network/people', 'GET', undefined, otherToken)).json()).people.length, 0)
+})
+
+test('identity confirmation yields direct and one-intermediary paths for multiple candidates without more provider calls', async () => {
+  await resetNetworks()
+  const saved = await networkSearch('network-paths-key')
+  assert.equal(saved.result.introduction.status, 'network_not_imported')
+  const imported = await (await csvImport(csvNetwork(csvEdge('me', 'a'), csvEdge('a', 'founder'), csvEdge('me', 'executive')))).json()
+  const beforeProvider = calls
+  const unresolved = await (await networkRequest('discovery/paths', 'POST', { searchId: saved.id, companyId: sample.company.id })).json()
+  assert.equal(unresolved.introduction.status, 'identity_unresolved'); assert.equal(unresolved.paths.length, 0)
+  const founder = await (await matchIdentity(saved.id, networkCandidate.id, 'founder', imported.revision)).json()
+  assert.equal(founder.paths.length, 1); assert.equal(founder.paths[0].steps, 2); assert.equal(founder.paths[0].intermediateCount, 1)
+  assert.equal(founder.paths[0].targetPersonId, networkCandidate.id)
+  assert.equal(founder.people.find((person: any) => person.isCurrentUser).name, 'Test User')
+  assert.ok(founder.connections.every((edge: any) => edge.source === 'user-import' && edge.evidence.verification === 'user_confirmed' && edge.evidence.statement.includes('Synthetic')))
+  const both = await (await matchIdentity(saved.id, networkExecutive.id, 'executive', imported.revision)).json()
+  assert.equal(both.paths.length, 2)
+  assert.equal(both.paths.find((path: any) => path.targetPersonId === networkExecutive.id).intermediateCount, 0)
+  assert.equal(calls, beforeProvider, 'Linking and path refresh use no Skrapp or other provider requests')
+  const history = await (await get('/api/history/' + saved.id)).json()
+  assert.deepEqual(history.result.paths, both.paths)
+  const stored = await SearchHistory.findById(saved.id).lean()
+  assert.equal(stored!.result.paths, null, 'Private graph is not duplicated into durable provider history')
+  assert.equal((await networkSearch('network-paths-new-search')).result.paths.length, 2, 'Confirmed identity persists for stable provider/company/candidate IDs')
+})
+
+test('another account cannot access a saved search, map a foreign contact or traverse another user’s edges', async () => {
+  await resetNetworks()
+  const first = await networkSearch('network-owner-first')
+  const second = await networkSearch('network-owner-second', otherToken)
+  const imported = await (await csvImport(csvNetwork(csvEdge('me', 'founder')))).json()
+  assert.equal((await matchIdentity(first.id, networkCandidate.id, 'founder', imported.revision, otherToken)).status, 404)
+  assert.equal((await networkRequest('discovery/paths', 'POST', { searchId: first.id, companyId: sample.company.id, user: 'forged' }, otherToken)).status, 404)
+  assert.equal((await matchIdentity(second.id, networkCandidate.id, 'founder', 0, otherToken)).status, 409)
+  await csvImport(csvNetwork(csvEdge('me', 'own-contact')), 0, otherToken)
+  assert.equal((await matchIdentity(second.id, networkCandidate.id, 'founder', 1, otherToken)).status, 404)
+  assert.equal((await matchIdentity(first.id, networkCandidate.id, 'founder', imported.revision)).status, 200)
+  const other = await (await get('/api/history/' + second.id, otherToken)).json()
+  assert.equal(other.result.paths.length, 0); assert.equal(other.result.introduction.status, 'identity_unresolved')
+  assert.ok(!JSON.stringify(other).includes('Synthetic fixture confirms'))
+})
+
+test('follow records and missing candidate identities never become introduction paths', async () => {
+  await resetNetworks()
+  const saved = await networkSearch('network-follows-key')
+  await csvImport(csvNetwork(csvEdge('me', 'founder', 'mutual_follow'), csvEdge('me', 'executive', 'follows')))
+  const found = await (await matchIdentity(saved.id, networkCandidate.id, 'founder', 1)).json()
+  assert.equal(found.paths.length, 0); assert.equal(found.introduction.status, 'no_path')
+  assert.equal(found.introduction.excluded.follows, 2)
+  assert.equal(found.introduction.candidates.find((person: any) => person.candidateId === networkExecutive.id).status, 'identity_unresolved')
+})
+
+test('repeated imports are idempotent; replacement and deletion invalidate identity links and history paths', async () => {
+  await resetNetworks()
+  const saved = await networkSearch('network-lifecycle-key')
+  const csv = csvNetwork(csvEdge('me', 'founder'))
+  await csvImport(csv)
+  await matchIdentity(saved.id, networkCandidate.id, 'founder', 1)
+  const repeated = await (await csvImport(csv, 1)).json()
+  assert.equal(repeated.unchanged, true); assert.equal(repeated.revision, 1)
+  assert.equal(await NetworkRelationship.countDocuments(), 1)
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'new-contact')), 0)).status, 409)
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'new-contact')), 1)).status, 201)
+  assert.equal(await CandidateIdentity.countDocuments(), 0)
+  assert.equal((await (await get('/api/history/' + saved.id)).json()).result.paths.length, 0)
+  assert.equal((await networkRequest('network', 'DELETE', { revision: 2 })).status, 200)
+  const history = await (await get('/api/history/' + saved.id)).json()
+  assert.equal(history.result.introduction.status, 'network_not_imported')
+  assert.equal(history.result.company.name, sample.company.name)
+  assert.equal(await NetworkPerson.countDocuments(), 0); assert.equal(await NetworkRelationship.countDocuments(), 0)
+})
+
+test('concurrent CSV imports publish one complete graph; a database write failure keeps the previous graph active', async t => {
+  await resetNetworks()
+  const results = await Promise.all([csvImport(csvNetwork(csvEdge('me', 'a'))), csvImport(csvNetwork(csvEdge('me', 'b')))])
+  assert.deepEqual(results.map(response => response.status).sort(), [201, 409])
+  assert.equal(await NetworkPerson.countDocuments(), 1); assert.equal(await NetworkRelationship.countDocuments(), 1)
+  const current = await (await networkRequest('network')).json()
+  const failure = t.mock.method(NetworkRelationship, 'insertMany', async () => { throw new Error('Synthetic database failure') })
+  assert.equal((await csvImport(csvNetwork(csvEdge('me', 'c')), current.revision)).status, 500)
+  failure.mock.restore()
+  const retained = await (await networkRequest('network')).json()
+  assert.equal(retained.revision, current.revision); assert.equal(retained.personCount, 1)
+  assert.equal(await NetworkPerson.countDocuments(), 1)
+})
+
+test('candidate absence, provider failure and graph failure are separate outcomes and keep company results', async t => {
+  await resetNetworks()
+  run = async () => ({ matches: [{ ...sample, peopleStatus: 'no_candidates' }], total: 1, matchMode: 'exact' })
+  const absent = await (await post('Test Company', 'network-no-candidate')).json()
+  assert.equal(absent.result.introduction.status, 'candidate_not_identified')
+  run = async () => ({ matches: [{ ...sample, peopleStatus: 'provider_error' }], total: 1, matchMode: 'exact' })
+  const failedProvider = await (await post('Test Company', 'network-candidate-error')).json()
+  assert.equal(failedProvider.result.introduction.status, 'candidate_provider_error')
+  const saved = await networkSearch('network-read-error')
+  const failure = t.mock.method(NetworkState, 'findOne', () => { throw new Error('Synthetic graph read failure') })
+  const graphError = await (await networkRequest('discovery/paths', 'POST', { searchId: saved.id, companyId: sample.company.id })).json()
+  failure.mock.restore()
+  assert.equal(graphError.introduction.status, 'network_error')
+  assert.equal(graphError.company.id, sample.company.id)
+  assert.ok(graphError.people.some((person: any) => person.id === networkCandidate.id))
+  assert.deepEqual(graphError.paths, [])
 })

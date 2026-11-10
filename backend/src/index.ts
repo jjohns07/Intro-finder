@@ -2,6 +2,7 @@ import path from 'path'
 import dotenv from 'dotenv'
 import { createApp } from './app'
 import SearchHistory from './models/SearchHistory'
+import { initializeNetworkIndexes } from './models/Network'
 import { getJwtConfig } from './config/auth'
 import { connectDatabase, getDatabaseStatus } from './config/db'
 import { createDiscoveryProvider, shouldVerifyCompanyInformationOnStartup, shouldVerifyOnStartup } from './discovery/provider'
@@ -24,7 +25,7 @@ try {
 async function startServer(): Promise<void> {
   try {
     await connectDatabase()
-    if (getDatabaseStatus() === 'connected') await SearchHistory.init()
+    if (getDatabaseStatus() === 'connected') await Promise.all([SearchHistory.init(), initializeNetworkIndexes()])
 
     app.listen(port, () => {
       console.log(`Intro Finder API listening on port ${port}`)

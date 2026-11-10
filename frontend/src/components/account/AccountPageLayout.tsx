@@ -7,6 +7,7 @@ const accountNavigation = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/find-introductions', label: 'Find introductions' },
   { href: '/history', label: 'Search history' },
+  { href: '/network', label: 'Your network' },
   { href: '/settings', label: 'Settings' },
 ]
 

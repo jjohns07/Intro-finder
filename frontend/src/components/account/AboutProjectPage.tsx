@@ -66,7 +66,7 @@ export function AboutProjectPage({ user, logo, onLogout }: {
             <div><h3>Discovery interface</h3><p>Company search, introduction-path views, activity visualisations and a searchable history interface, with clear loading, empty and unavailable states.</p></div>
             <div><h3>Personal preferences</h3><p>Account details and dark, light or system appearance, with theme preferences saved in the browser.</p></div>
             <div><h3>Responsive and accessible design</h3><p>Layouts for desktop, tablet and mobile, keyboard navigation, labelled controls and support for reduced motion.</p></div>
-            <p className="about-availability">Company discovery, network data, saved search history and social sign-in still require backend or external integrations. The application identifies these as unavailable; it does not present invented connections as real results.</p>
+            <p className="about-availability">Company discovery and saved search history use the backend. Private CSV imports support evidenced introduction-path searches after you confirm candidate identities. Social sign-in and automated social-network imports are unavailable. Paths depend on your supplied evidence and do not guarantee an introduction.</p>
           </div>
         </section>
 

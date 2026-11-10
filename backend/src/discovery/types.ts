@@ -1,6 +1,7 @@
 import type { ProviderFailure } from './errors'
+import type { IntroductionReport, IntroductionStatus, NetworkRelationshipType, RelationshipEvidence } from '../network/types'
 
-export type DataSourceKind = 'local-fixture' | 'approved-source' | 'disabled'
+export type DataSourceKind = 'local-fixture' | 'approved-source' | 'disabled' | 'user-import'
 export type CompanyMatchMode = 'exact' | 'prefix' | 'relevance'
 export interface DiscoveryVerification {
   status: 'not_run' | 'running' | 'passed' | 'partial' | 'failed'
@@ -33,7 +34,7 @@ export type PersonRole =
   | 'advisor'
   | 'unknown'
 
-export type RelationshipStrength = 'direct' | 'warm' | 'introduced' | 'vouched' | 'unknown'
+export type RelationshipStrength = 'direct' | 'warm' | 'introduced' | 'vouched' | 'unknown' | NetworkRelationshipType
 
 export type PathType = 'direct' | 'warm' | 'team' | 'advisor' | 'unknown'
 
@@ -50,6 +51,8 @@ export interface Person {
   imageUrl?: string
   profileUrl?: string
   isCurrentUser?: boolean
+  importedAt?: string
+  updatedAt?: string
   evidence?: EmploymentEvidence[]
   verification?: { confidence: 'provider-supported'; explanation: string; limitation: string }
 }
@@ -126,6 +129,7 @@ export interface Connection {
   source: DataSourceKind
   notes?: string
   metadata?: Record<string, unknown>
+  evidence?: RelationshipEvidence
 }
 
 export interface IntroductionPath {
@@ -139,6 +143,11 @@ export interface IntroductionPath {
   calculatedStrength?: { score: number; explanation: string }
   source: DataSourceKind
   isFixture?: boolean
+  connectionIds?: string[]
+  steps?: number
+  intermediateCount?: number
+  updatedAt?: string
+  oldestEvidenceAt?: string
 }
 
 export interface DiscoveryRequest {
@@ -160,7 +169,8 @@ export interface DiscoveryResult {
   warnings: string[]
   peopleStatus?: PeopleStatus
   peopleTruncated?: boolean
-  connectionStatus?: 'unavailable'
+  connectionStatus?: 'unavailable' | IntroductionStatus
+  introduction?: IntroductionReport
 }
 
 export interface SocialPlatformAdapter {
