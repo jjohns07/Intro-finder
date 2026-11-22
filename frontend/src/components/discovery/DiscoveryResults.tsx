@@ -1,3 +1,5 @@
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useCallback, useId, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { useSectionReveal } from '../dashboard/useSectionReveal'
@@ -131,7 +133,7 @@ function PathPanel({ path, people, connections, index }: {
               <p>{person.isCurrentUser ? 'Your authenticated account identity.' : person.source === 'user-import' ? 'Contact from your private CSV import.' : 'Candidate supplied by the company data provider.'}</p>
               {person.importedAt && <p>Imported: <SourceTime value={person.importedAt} /></p>}
               {person.updatedAt && <p>Updated: <SourceTime value={person.updatedAt} /></p>}
-              {safeWebUrl(person.profileUrl) ? <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View profile ↗</a> : <p>Profile link not provided.</p>}
+              {safeWebUrl(person.profileUrl) ? <a className="icon-link" href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View profile <InterfaceIcon icon={ArrowUpRight} /></a> : <p>Profile link not provided.</p>}
             </details>
           </div>
           {i < people.length - 1 && <div className="discovery-edge">
@@ -150,7 +152,7 @@ function PathPanel({ path, people, connections, index }: {
         {hasStrength && <p><strong>How strength was calculated</strong>{strength.explanation}</p>}
         <ol>
           {people.slice(0, -1).map((person, i) => <li key={`${person.id}-${i}`}>
-            <strong>{person.name} <span aria-hidden="true">→</span> {people[i + 1].name}</strong>
+            <strong className="discovery-path-relationship"><span>{person.name}</span><InterfaceIcon icon={ArrowRight} /><span>{people[i + 1].name}</span></strong>
             <p>{edges[i] ? relationshipLabels[edges[i].relationship] : 'Relationship not provided'}{edges[i]?.notes ? `. ${edges[i].notes}` : ''}</p>
             {edges[i]?.evidence && <div className="path-edge-evidence"><p>{edges[i]!.evidence!.statement}</p><p>Source: private CSV · Confirmed by you; not independently verified.</p>
               {edges[i]!.evidence!.recordNumber && <p>CSV record {edges[i]!.evidence!.recordNumber} (including the header).</p>}
@@ -159,7 +161,7 @@ function PathPanel({ path, people, connections, index }: {
         </ol>
         <div className="discovery-profile-links">{people.map(person => {
           const url = safeWebUrl(person.profileUrl)
-          return url ? <a key={person.id} href={url} target="_blank" rel="noopener noreferrer">View {person.name}’s profile <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a> : null
+          return url ? <a className="icon-link" key={person.id} href={url} target="_blank" rel="noopener noreferrer">View {person.name}’s profile <InterfaceIcon icon={ArrowUpRight} /><span className="sr-only"> (opens in a new tab)</span></a> : null
         })}</div>
         <p className="discovery-source-note">{path.source === 'local-fixture' || path.isFixture ? 'Demonstration path — not a real introduction.' : path.source === 'user-import' ? 'Path calculated from your confirmed CSV relationships. Trust and willingness to introduce have not been independently verified.' : path.source === 'approved-source' ? 'Path supplied by an approved data source.' : 'Path source is unavailable.'} An introduction still requires the people involved to agree.</p>
       </div>
@@ -214,7 +216,7 @@ export function DiscoveryResults({ result: initialResult, onNewSearch, onDetails
       {!!result.warnings?.length && <div className="discovery-result-warnings"><strong>Source notes</strong><ul>{result.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
       <article className="discovery-people" aria-label="Founder and decision-maker candidates">
           <p className="presentation-eyebrow">Founder & decision-maker candidates</p><div className="discovery-candidates-grid">{targets.length ? targets.map(person => <div className="discovery-target" key={person.id}>
-            <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile ↗<span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} />
+            <PersonPortrait person={person} /><div><h3>{person.name}</h3><p className="discovery-candidate-role">{person.role === 'founder' ? 'Founder candidate' : 'Decision-maker candidate'}</p>{(person.title || person.role) && <p>{person.title || person.role}</p>}{safeWebUrl(person.profileUrl) && <a className="icon-link" href={safeWebUrl(person.profileUrl)} target="_blank" rel="noopener noreferrer">View provider-listed profile <InterfaceIcon icon={ArrowUpRight} /><span className="sr-only"> (opens in a new tab)</span></a>}<CandidateEvidence person={person} />
               {companyLoading.searchId && result.introduction?.networkRevision !== undefined && <CandidateNetworkMatch person={person} companyId={company.id} searchId={companyLoading.searchId} revision={result.introduction.networkRevision} identity={result.introduction.candidates.find(candidate => candidate.candidateId === person.id)?.identity} onResult={remember} />}
               <CandidatePathStatus candidate={result.introduction?.candidates.find(candidate => candidate.candidateId === person.id)} />
             </div>
@@ -229,16 +231,16 @@ export function DiscoveryResults({ result: initialResult, onNewSearch, onDetails
         {result.introduction.limited && <p>{result.introduction.limits?.every(limit => limit === 'path_count')
           ? 'Additional shortest paths exist. Results are capped per candidate.' : 'Search limits were reached. More paths may exist beyond the searched network.'}</p>}
         {result.introduction.excluded && <p>Excluded relationships: {result.introduction.excluded.follows} follow records, {result.introduction.excluded.unverified} unverified records, {result.introduction.excluded.stale} stale records.</p>}
-        <Link className="presentation-inline-action" to="/network">Manage your network ↗</Link>
+        <Link className="presentation-inline-action" to="/network">Manage your network <InterfaceIcon icon={ArrowUpRight} /></Link>
       </div>}
       {companyLoading.searchId && result.company.source === 'approved-source' && <button className="button button--secondary network-refresh-paths" type="button" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? 'Checking paths…' : 'Refresh introduction paths'}</button>}
       {networkError && <p className="network-error" role="alert">{networkError}</p>}
       {incompleteCount > 0 && <p className="discovery-result-warnings">{incompleteCount} {incompleteCount === 1 ? 'path lacks' : 'paths lack'} complete, eligible evidence or person details. Refresh paths to check your current network.</p>}
       {resolvedPaths.length ? <div className="discovery-path-list">{resolvedPaths.map(({ path, people }, index) => <PathPanel key={path.id} path={path} people={people} connections={result.connections ?? []} index={index} />)}</div> : <div className="discovery-no-paths">
-        <span className="discovery-state-symbol" aria-hidden="true">↗</span>
+        <span className="discovery-state-symbol" aria-hidden="true"><InterfaceIcon icon={ArrowUpRight} /></span>
         <h3>{result.paths === null || incompleteCount ? 'Introduction paths are not available yet.' : 'No introduction path found.'}</h3>
         <p>{incompleteCount ? 'Some paths lack complete people, identity confirmation or relationship evidence and cannot be displayed.' : result.introduction ? pathReasons[result.introduction.status] : result.paths === null ? 'Company and people discovery is separate from connection discovery. No relationship source is connected, so we cannot establish a warm introduction. A social follow does not establish a trusted relationship.' : `We found ${company.name}, but no path was returned in the available network data. Try another company to continue exploring.`}</p>
-        <button type="button" className="presentation-inline-action" onClick={onNewSearch}>Search another company <span aria-hidden="true">↗</span></button>
+        <button type="button" className="presentation-inline-action" onClick={onNewSearch}>Search another company <InterfaceIcon icon={ArrowRight} /></button>
       </div>}
     </section>
   )

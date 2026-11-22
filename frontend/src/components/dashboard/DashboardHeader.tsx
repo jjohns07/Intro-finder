@@ -1,3 +1,5 @@
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { MotionPresence } from '../motion/MotionPresence'
@@ -72,7 +74,7 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
             <span className="presentation-eyebrow">Your account</span>
             <strong>{name}</strong>
             <p>{email}</p>
-            <Link className="profile-account-link" to="/settings#account" onClick={() => setOpenPanel(null)}>Account & preferences <span aria-hidden="true">↗</span></Link>
+            <Link className="profile-account-link" to="/settings#account" onClick={() => setOpenPanel(null)}>Account & preferences <InterfaceIcon icon={ArrowUpRight} /></Link>
             <button className="button button--secondary button--full" type="button" onClick={onLogout}>Logout</button>
           </MotionPresence>
         <button
@@ -95,11 +97,11 @@ export function DashboardHeader({ name, email, logo, onLogout, links, brandHref 
             {links.map((link, index) => (
               <Link key={link.href} to={link.href} aria-current={location.pathname === link.href ? 'page' : undefined} reloadDocument={link.href.includes('#')} onClick={() => setOpenPanel(null)}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                {link.label}
-                <span aria-hidden="true">↗</span>
+                <span className="presentation-navigation-label">{link.label}</span>
+                <InterfaceIcon icon={ArrowUpRight} />
               </Link>
             ))}
-            <button className="presentation-logout" type="button" onClick={onLogout}>Logout <span aria-hidden="true">↗</span></button>
+            <button className="presentation-logout" type="button" onClick={onLogout}>Logout <InterfaceIcon icon={ArrowRight} /></button>
           </MotionPresence>
       </div>
     </header>

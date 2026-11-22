@@ -1,3 +1,5 @@
+import { ArrowUpRight, RefreshCw } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { CompanyMark } from '../dashboard/CompanyMark'
 import { mergeCompanyInformation, safeWebUrl, type DiscoveryCompany, type DiscoveryCompanyDetails, type DiscoveryService } from '../../services/discovery'
@@ -32,7 +34,7 @@ function Fact({ label, children, missingLabel = 'Not provided' }: { label: strin
 
 function ExternalLink({ url, children }: { url?: string; children: ReactNode }) {
   const safe = safeWebUrl(url)
-  return safe ? <a href={safe} target="_blank" rel="noopener noreferrer">{children} <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a> : null
+  return safe ? <a className="icon-link" href={safe} target="_blank" rel="noopener noreferrer">{children} <InterfaceIcon icon={ArrowUpRight} /><span className="sr-only"> (opens in a new tab)</span></a> : null
 }
 
 export function CompanyInformation({ company: searchCompany, initialDetails, searchId, loadDetails, onDetailsChange, autoLoadDetails = true }: CompanyInformationProps) {
@@ -143,7 +145,7 @@ export function CompanyInformation({ company: searchCompany, initialDetails, sea
           <p>Company information is supplied by the provider and may change. Fields not supplied are marked “Not provided”. Available search fields are used when the profile does not supply them; headquarters fields are kept together from one source.</p>
         </details>
       </div>
-      {canLoad && <button type="button" className="button button--secondary discovery-company-refresh" disabled={loading} onClick={() => void load(true)}><span aria-hidden="true">↻</span> Refresh company information</button>}
+      {canLoad && <button type="button" className="button button--secondary discovery-company-refresh" disabled={loading} onClick={() => void load(true)}><InterfaceIcon icon={RefreshCw} /> Refresh company information</button>}
     </footer>
   </article>
 }

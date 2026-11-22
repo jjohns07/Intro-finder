@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useEffect, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { DashboardHeader } from '../dashboard/DashboardHeader'
@@ -38,7 +40,7 @@ export function AccountPageLayout({ user, logo, onLogout, title, children }: Acc
     <a className="presentation-skip-link" href="#account-page-content">Skip to {title.toLowerCase()}</a>
     <div className="presentation-frame">
       <DashboardHeader name={user.name} email={user.email} logo={logo} onLogout={onLogout} brandHref="/dashboard" context={title} links={accountNavigation} />
-      <nav className="account-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><span aria-hidden="true">←</span> Back to dashboard</Link><span>Intro Finder / {title}</span></nav>
+      <nav className="account-breadcrumb" aria-label="Breadcrumb"><Link to="/dashboard"><InterfaceIcon icon={ArrowLeft} /> Back to dashboard</Link><span>Intro Finder / {title}</span></nav>
       {children}
       <AppFooter backToTop="#account-page-content" />
     </div>

@@ -1,3 +1,5 @@
+import { ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { AnimatedMetric } from './AnimatedMetric'
 import { Link } from 'react-router-dom'
 import type { NetworkDistribution, PlatformIntegration } from './data'
@@ -26,7 +28,7 @@ export function NetworkSection({ integrations = currentIntegrations, connectionC
         <div><dt>Available connections</dt><dd>{connectionCount == null ? <><span aria-hidden="true">—</span><span className="sr-only">Not available</span></> : <AnimatedMetric value={connectionCount} />}</dd></div>
       </dl>
       {!activeCount && <p className="presentation-data-note">No social platforms are connected. You can import authorised relationship data privately using CSV.</p>}
-      <Link className="presentation-inline-action" to="/network">Manage imported connections ↗</Link>
+      <Link className="presentation-inline-action" to="/network">Manage imported connections <InterfaceIcon icon={ArrowUpRight} /></Link>
     </div>
     <div className="network-platform-panel">
       <figure className="network-platform-map">

@@ -149,7 +149,7 @@
 @media (max-width: 1050px) {
   .presentation-your-network { gap: var(--space-8); }
   .recent-search-feed > li { grid-template-columns: 3rem minmax(0, 1fr) auto; gap: var(--space-3) var(--space-4); }
-  .recent-search-feed > li > button { grid-column: 2 / -1; justify-self: start; }
+  .recent-search-feed > li > :is(button, .presentation-inline-action) { grid-column: 2 / -1; justify-self: start; }
 }
 
 @media (max-width: 760px) {

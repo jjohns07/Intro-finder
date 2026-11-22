@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react'
+import { InterfaceIcon } from './components/InterfaceIcon'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate,   Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -401,7 +403,7 @@ function DashboardScreen({ user, onLogout }: { user: User; onLogout: () => void 
                     aria-describedby={searchMessage ? 'company-search-feedback' : 'company-search-note'}
                   />
                 </div>
-                <button className="button button--primary presentation-primary-action" type="submit">Find introductions <span aria-hidden="true">↗</span></button>
+                <button className="button button--primary presentation-primary-action" type="submit">Find introductions <InterfaceIcon icon={ArrowRight} /></button>
               </form>
               <p className="presentation-data-note" id="company-search-note">Company discovery is not connected yet.</p>
               {searchMessage && <p id="company-search-feedback" className={`notice ${searchMessage.type === 'error' ? 'notice--error' : ''}`} role={searchMessage.type === 'error' ? 'alert' : 'status'}>{searchMessage.text}</p>}

@@ -108,7 +108,7 @@
 .presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(2) { animation-delay: 20ms; }
 .presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(3) { animation-delay: 40ms; }
 .presentation-navigation.motion-presence:not([data-exiting]) a:nth-of-type(n+4) { animation-delay: 60ms; }
-.presentation-navigation a > span:last-child { transition: translate 160ms var(--ease-standard); }
+.presentation-navigation a > .interface-icon { transition: translate 160ms var(--ease-standard); }
 .auth-heading h1 { animation: motion-heading-in 480ms var(--ease-reveal) 100ms backwards; }
 .auth-spinner, .discovery-spinner { animation-duration: 720ms; }
 .discovery-state-card, .discovery-path-details, .history-empty, .auth-feedback { animation-duration: 240ms; }
@@ -125,7 +125,7 @@
   :is(.button, .primary-button, .secondary-button):hover:not(:disabled):not([aria-disabled='true']) { translate: 0 -1px; }
   :is(.opportunity-panel, .discovery-path):hover { translate: 0 -2px; box-shadow: var(--shadow-panel); }
   .theme-option:hover { translate: 0 -1px; }
-  .presentation-navigation a:hover > span:last-child { translate: 2px -2px; }
+  .presentation-navigation a:hover > .interface-icon { translate: 2px -2px; }
 }
 @media (max-width: 760px) {
   .opportunity-panel.presentation-in-view .opportunity-nodes li + li::before { animation-name: connection-vertical-in; }

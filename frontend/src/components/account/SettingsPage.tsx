@@ -1,3 +1,5 @@
+import { ArrowRight, ArrowUpRight, RefreshCw } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useThemePreference, type ThemePreference } from '../../theme/useThemePreference'
@@ -33,7 +35,7 @@ export function SettingsPage(props: AccountPageProps) {
           <input type="radio" name="theme" value={theme.value} checked={preference === theme.value} aria-label={`${theme.value === 'system' ? 'System' : theme.value === 'dark' ? 'Dark' : 'Light'} theme`} onChange={() => { setPreference(theme.value); setThemeChanged(true) }} />
           <span className={`theme-preview theme-preview--${theme.value}`} aria-hidden="true"><i /><span /><b /><em /></span>
           <span className="theme-option-title">{theme.label}<span className="theme-selected" aria-hidden="true">{preference === theme.value ? '✓' : ''}</span></span><span className="theme-option-description">{theme.description}</span>
-        </label>)}</fieldset><p className="settings-availability">Applies throughout Intro Finder, including the login page. Saved in this browser.</p><p className={`theme-save-feedback ${persistenceError ? 'theme-save-error' : ''}`} role="status" aria-live="polite">{persistenceError ? 'Theme applied, but your browser could not save it. It may reset when you reload.' : themeChanged ? 'Appearance preference saved.' : ''}</p>{persistenceError && <button className="presentation-inline-action" type="button" onClick={() => { setPreference(preference); setThemeChanged(true) }}>Retry saving preference <span aria-hidden="true">↻</span></button>}</div>
+        </label>)}</fieldset><p className="settings-availability">Applies throughout Intro Finder, including the login page. Saved in this browser.</p><p className={`theme-save-feedback ${persistenceError ? 'theme-save-error' : ''}`} role="status" aria-live="polite">{persistenceError ? 'Theme applied, but your browser could not save it. It may reset when you reload.' : themeChanged ? 'Appearance preference saved.' : ''}</p>{persistenceError && <button className="presentation-inline-action" type="button" onClick={() => { setPreference(preference); setThemeChanged(true) }}>Retry saving preference <InterfaceIcon icon={RefreshCw} /></button>}</div>
       </section>
 
       <section className="settings-section" id="platforms" tabIndex={-1} aria-labelledby="platforms-heading" data-reveal>
@@ -41,13 +43,13 @@ export function SettingsPage(props: AccountPageProps) {
         <div className="settings-platforms"><p className="settings-platform-intro">No social platforms are configured for Intro Finder yet.</p><ul>{[{ name: 'LinkedIn', mark: 'in' }, { name: 'X', mark: '𝕏' }, { name: 'Google', mark: 'G' }].map(platform => <li key={platform.name}><span className={`settings-platform-mark settings-platform-mark--${platform.name.toLowerCase()}`} aria-hidden="true">{platform.mark}</span><div><h3>{platform.name}</h3><p>{platform.name === 'Google' ? 'Social sign-in' : 'Network discovery'}</p></div><span className="settings-platform-status">Not configured</span></li>)}</ul><p className="settings-availability">Connection actions will appear when an integration is available.</p></div>
       </section>
 
-      <p className="settings-availability">Have authorised connection data? <Link className="presentation-inline-action" to="/network">Import and manage your private network ↗</Link></p>
+      <p className="settings-availability">Have authorised connection data? <Link className="presentation-inline-action" to="/network">Import and manage your private network <InterfaceIcon icon={ArrowUpRight} /></Link></p>
       <section className="settings-section settings-security" id="security" tabIndex={-1} aria-labelledby="security-heading" data-reveal>
         <div className="settings-section-copy"><p className="presentation-eyebrow">04 / Peace of mind</p><h2 id="security-heading">Security</h2><p>Know where you stand.<br />Stay in control.</p></div>
-        <div className="settings-security-content"><div className="settings-session"><div><span className="account-signed-in"><i aria-hidden="true" /> Current session</span><h3>You’re signed in here.</h3><p>Sign out of Intro Finder in this browser tab.</p></div><button className="button button--secondary" type="button" onClick={onLogout}>Sign out <span aria-hidden="true">↗</span></button></div><div className="settings-security-notes"><div><h3>Password</h3><p>Password changes and resets are not available yet.</p></div><div><h3>Other sessions</h3><p>Device history and signing out of other sessions are not available.</p></div></div></div>
+        <div className="settings-security-content"><div className="settings-session"><div><span className="account-signed-in"><i aria-hidden="true" /> Current session</span><h3>You’re signed in here.</h3><p>Sign out of Intro Finder in this browser tab.</p></div><button className="button button--secondary" type="button" onClick={onLogout}>Sign out <InterfaceIcon icon={ArrowRight} /></button></div><div className="settings-security-notes"><div><h3>Password</h3><p>Password changes and resets are not available yet.</p></div><div><h3>Other sessions</h3><p>Device history and signing out of other sessions are not available.</p></div></div></div>
       </section>
-      <div className="settings-closing"><p>All set for your next connection.</p><Link className="presentation-inline-action" to="/find-introductions">Keep exploring <span aria-hidden="true">↗</span></Link></div>
-      <div className="settings-project-note"><p>Intro Finder · SIWES Industrial Training Project</p><Link className="presentation-inline-action" to="/about">About This Project <span aria-hidden="true">↗</span></Link></div>
+      <div className="settings-closing"><p>All set for your next connection.</p><Link className="presentation-inline-action" to="/find-introductions">Keep exploring <InterfaceIcon icon={ArrowRight} /></Link></div>
+      <div className="settings-project-note"><p>Intro Finder · SIWES Industrial Training Project</p><Link className="presentation-inline-action" to="/about">About This Project <InterfaceIcon icon={ArrowUpRight} /></Link></div>
     </main>
   </AccountPageLayout>
 }

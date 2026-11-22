@@ -1,3 +1,5 @@
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { CompanyMark } from './CompanyMark'
 import { Link } from 'react-router-dom'
 import { historyName, historyStatus } from '../../services/history'
@@ -17,7 +19,7 @@ export function RecentSearchesSection({ onSearch }: {
   return <section className="presentation-activity recent-searches-section" id="activity" aria-labelledby="activity-heading" tabIndex={-1} data-reveal>
     <div className="presentation-activity-heading">
       <div><p className="presentation-eyebrow">05 / Recent searches</p><h2 id="activity-heading">Follow your curiosity.</h2></div>
-      <p>A record of the companies, people, and possibilities you have explored.<Link className="presentation-inline-action history-section-link" to="/history">View discovery history <span aria-hidden="true">↗</span></Link></p>
+      <p>A record of the companies, people, and possibilities you have explored.<Link className="presentation-inline-action history-section-link" to="/history">View discovery history <InterfaceIcon icon={ArrowUpRight} /></Link></p>
     </div>
     {state.kind === 'loading' ? <div className="history-loading" role="status"><span className="discovery-spinner" aria-hidden="true" /><p>Loading recent searches…</p></div>
       : state.kind === 'error' ? <div className="recent-search-empty" role="alert"><div><h3>We couldn’t load your recent searches.</h3><p>{state.message}</p></div><button type="button" className="presentation-inline-action" onClick={reload}>Try again</button></div>
@@ -26,12 +28,12 @@ export function RecentSearchesSection({ onSearch }: {
         <CompanyMark name={historyName(search)} logoUrl={safeWebUrl(search.company?.logoUrl)} />
         <div className="search-feed-company"><h3>{historyName(search)}</h3><p>{search.target ? <>{search.target.name}{search.target.title && <span> · {search.target.title}</span>}</> : search.candidateCount ? `${search.candidateCount} people candidates saved` : 'No person information saved'}</p></div>
         <div className="search-feed-meta"><SearchDate value={search.searchedAt} /><span className={`search-state search-state--${search.status}`}>{historyStatus(search)}</span></div>
-        <Link className="presentation-inline-action" to={`/history/${encodeURIComponent(search.id)}`} aria-label={`Open saved search for ${historyName(search)}`}>Open <span aria-hidden="true">↗</span></Link>
+        <Link className="presentation-inline-action" to={`/history/${encodeURIComponent(search.id)}`} aria-label={`Open saved search for ${historyName(search)}`}>Open <InterfaceIcon icon={ArrowUpRight} /></Link>
       </li>)}
     </ol> : <div className="recent-search-empty">
       <div className="search-feed-motif" aria-hidden="true"><span>01</span><i /><span>02</span><i /><span>03</span></div>
       <div><h3>Your next search starts the story.</h3><p>{searches == null ? 'Search history is not available yet. Your company searches will appear here once discovery is connected.' : 'No searches yet. Start with a company you would love to know better.'}</p></div>
-      <button className="presentation-inline-action" type="button" onClick={onSearch}>Start a company search <span aria-hidden="true">↗</span></button>
+      <button className="presentation-inline-action" type="button" onClick={onSearch}>Start a company search <InterfaceIcon icon={ArrowRight} /></button>
     </div>}
   </section>
 }

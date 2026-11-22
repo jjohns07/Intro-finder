@@ -1,3 +1,5 @@
+import { ArrowUpRight, X } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { ActivityData, ActivityPeriod, ActivityPoint } from './data'
 import { MotionPresence } from '../motion/MotionPresence'
@@ -111,13 +113,13 @@ export function MomentumSection({ data = null }: { data?: ActivityData | null })
               {selected && <path d={`M ${selectedX} 20 V 260`} className="chart-crosshair" vectorEffect="non-scaling-stroke" />}
             </svg>
             <ActivityTooltip id={`${chartId}-tooltip`} snapshot={selected ? { point: selected, view, example: isExample, x: selectedX } : null} />
-            {!hasValues && <div className="presentation-chart-empty"><span className="presentation-chart-empty-symbol" aria-hidden="true">↗</span><strong>Your story is just beginning.</strong><p>{view === 'searches' ? 'Company search trends will appear here when search history is available.' : 'Your connections and introduction opportunities will appear here when network data is available.'}</p></div>}
+            {!hasValues && <div className="presentation-chart-empty"><span className="presentation-chart-empty-symbol" aria-hidden="true"><InterfaceIcon icon={ArrowUpRight} /></span><strong>Your story is just beginning.</strong><p>{view === 'searches' ? 'Company search trends will appear here when search history is available.' : 'Your connections and introduction opportunities will appear here when network data is available.'}</p></div>}
           </div>
           <div className="presentation-chart-labels" aria-hidden="true">{intervals.map((label, index) => <span key={index} title={label}>{label}</span>)}</div>
         </div>
         <div className="presentation-chart-footer">
           <p>{isExample ? 'Sample values show how this chart will look with activity.' : hasValues ? 'Hover, tap, or use the arrow keys to explore your activity.' : 'See how your future activity could take shape.'}</p>
-          {!accountPoints?.length && <button className="presentation-inline-action" type="button" aria-pressed={showExample} onClick={() => { setShowExample(!showExample); setSelectedIndex(null) }}>{showExample ? 'Close example' : 'Preview example'}<span aria-hidden="true">{showExample ? '×' : '↗'}</span></button>}
+          {!accountPoints?.length && <button className="presentation-inline-action" type="button" aria-pressed={showExample} onClick={() => { setShowExample(!showExample); setSelectedIndex(null) }}>{showExample ? 'Close example' : 'Preview example'}<InterfaceIcon icon={showExample ? X : ArrowUpRight} /></button>}
         </div>
         {hasValues && <details className="presentation-chart-table">
           <summary>{isExample ? 'View example data' : 'View activity data'}</summary>

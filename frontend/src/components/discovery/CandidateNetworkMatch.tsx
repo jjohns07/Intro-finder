@@ -1,3 +1,5 @@
+import { ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useId, useState } from 'react'
 import { networkService, type IdentityEvidence, type NetworkPeople } from '../../services/network'
 import { safeWebUrl, type DiscoveryPerson, type DiscoveryResult } from '../../services/discovery'
@@ -38,7 +40,7 @@ export function CandidateNetworkMatch({ person, companyId, searchId, identity, r
     finally { setBusy(false) }
   }
   return <div className="candidate-network-match">
-    {identity && <details className="discovery-evidence"><summary>Identity match: confirmed by you</summary><p>Imported contact: {identity.name}</p><p>{identity.statement}</p><p>Confirmed: <time dateTime={identity.confirmedAt}>{new Date(identity.confirmedAt).toLocaleString()}</time></p>{safeWebUrl(identity.profileUrl) && <a href={safeWebUrl(identity.profileUrl)} target="_blank" rel="noopener noreferrer">Imported contact profile ↗</a>}<button type="button" className="presentation-inline-action" disabled={busy} onClick={() => void clear()}>Remove identity confirmation</button></details>}
+    {identity && <details className="discovery-evidence"><summary>Identity match: confirmed by you</summary><p>Imported contact: {identity.name}</p><p>{identity.statement}</p><p>Confirmed: <time dateTime={identity.confirmedAt}>{new Date(identity.confirmedAt).toLocaleString()}</time></p>{safeWebUrl(identity.profileUrl) && <a className="icon-link" href={safeWebUrl(identity.profileUrl)} target="_blank" rel="noopener noreferrer">Imported contact profile <InterfaceIcon icon={ArrowUpRight} /></a>}<button type="button" className="presentation-inline-action" disabled={busy} onClick={() => void clear()}>Remove identity confirmation</button></details>}
     <button type="button" className="presentation-inline-action" disabled={busy} aria-expanded={open} aria-controls={id} onClick={() => { setOpen(!open); if (!open) { setQuery(''); void find('') } }}>{identity ? 'Change network identity' : 'Match to your network'}</button>
     {open && <form id={id} className="network-match-form" onSubmit={event => { event.preventDefault(); void save() }}>
       <p>Confirm who this candidate is using your own evidence. Matching names alone is insufficient; Skrapp’s executive list does not supply an individual profile ID.</p>
@@ -52,7 +54,7 @@ export function CandidateNetworkMatch({ person, companyId, searchId, identity, r
         <button type="button" className="button button--secondary" disabled={busy || page === 1} onClick={() => void find(loadedQuery, page - 1)}>Previous contacts</button>
         <button type="button" className="button button--secondary" disabled={busy || page * 50 >= contacts.total} onClick={() => void find(loadedQuery, page + 1)}>Next contacts</button>
       </div>}
-      {selected && safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl) && <a href={safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl)} target="_blank" rel="noopener noreferrer">Inspect selected contact’s profile ↗</a>}
+      {selected && safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl) && <a className="icon-link" href={safeWebUrl(contacts?.people.find(contact => contact.localId === selected)?.profileUrl)} target="_blank" rel="noopener noreferrer">Inspect selected contact’s profile <InterfaceIcon icon={ArrowUpRight} /></a>}
       <label>Evidence for this identity<textarea value={statement} minLength={10} maxLength={500} required disabled={busy} onChange={event => { setStatement(event.target.value); setConfirmed(false) }} /></label>
       <label className="network-check"><input type="checkbox" checked={confirmed} disabled={busy || !selected} onChange={event => setConfirmed(event.target.checked)} />I confirm this imported contact is {person.name} at the selected company, based on the evidence above.</label>
       <button type="submit" className="button button--primary" disabled={!selected || !confirmed || statement.trim().length < 10 || busy}>Confirm identity and find paths</button>

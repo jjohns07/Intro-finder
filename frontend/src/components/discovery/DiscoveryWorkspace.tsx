@@ -1,3 +1,5 @@
+import { ArrowRight, ArrowUpRight, CornerDownLeft } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { companyDiscovery, type DiscoveryResult, type DiscoveryService } from '../../services/discovery'
@@ -124,18 +126,18 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
               {companyName && <button className="discovery-clear" type="button" aria-label={loading ? 'Cancel and clear search' : 'Clear search'} onClick={newSearch}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg></button>}
             </div>
             <button type="submit" className="button button--primary discovery-submit" disabled={loading}>
-              {loading ? <><span className="discovery-spinner" aria-hidden="true" /> Searching…</> : <>Find introductions <span aria-hidden="true">↗</span></>}
+              {loading ? <><span className="discovery-spinner" aria-hidden="true" /> Searching…</> : <>Find introductions <InterfaceIcon icon={ArrowRight} /></>}
             </button>
           </div>
           {validation && <p className="discovery-validation" id="discovery-validation" role="alert">{validation}</p>}
-          <div className="discovery-search-meta"><p id="discovery-search-note">Search by company name. Every introduction starts with a little curiosity.</p><span><span aria-hidden="true">↵</span> Enter to search</span></div>
+          <div className="discovery-search-meta"><p id="discovery-search-note">Search by company name. Every introduction starts with a little curiosity.</p><span><InterfaceIcon icon={CornerDownLeft} /> Enter to search</span></div>
         </form>
       </section>
 
       {!service.available && state.kind !== 'unavailable' && <p className="discovery-availability"><span aria-hidden="true" />Company discovery is not connected yet. Results will be available when search is connected.</p>}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <div className="discovery-state-container" aria-busy={loading}>
-        {savedId && <p className="account-notice">{state.kind === 'pending' ? 'Search recorded.' : 'Search saved to your history.'} <Link to={`/history/${encodeURIComponent(savedId)}`}>Open saved search <span aria-hidden="true">↗</span></Link></p>}
+        {savedId && <p className="account-notice">{state.kind === 'pending' ? 'Search recorded.' : 'Search saved to your history.'} <Link className="icon-link" to={`/history/${encodeURIComponent(savedId)}`}>Open saved search <InterfaceIcon icon={ArrowUpRight} /></Link></p>}
         {state.kind === 'idle' && <section className="discovery-start" aria-labelledby="discovery-start-heading" data-reveal="editorial">
           <div className="discovery-start-heading"><p className="presentation-eyebrow">From curiosity to connection</p><h2 id="discovery-start-heading">Your next conversation<br /> starts here<span>.</span></h2></div>
           <ol className="discovery-guide">
@@ -152,21 +154,21 @@ export function DiscoveryWorkspace({ initialCompany = '', service = companyDisco
         </section>}
 
         {state.kind === 'unavailable' && <section className="discovery-state-card" aria-labelledby="discovery-unavailable-heading">
-          <span className="discovery-state-symbol" aria-hidden="true">↗</span>
-          <div><p className="presentation-eyebrow">Discovery unavailable</p><h2 id="discovery-unavailable-heading">Company search<br />is not connected<span>.</span></h2><p>Your attempt to find <strong>{state.query}</strong> was saved. {state.message || 'No discovery provider is configured. No provider search was performed.'}</p><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <span aria-hidden="true">↗</span></button></div>
+          <span className="discovery-state-symbol" aria-hidden="true"><InterfaceIcon icon={ArrowUpRight} /></span>
+          <div><p className="presentation-eyebrow">Discovery unavailable</p><h2 id="discovery-unavailable-heading">Company search<br />is not connected<span>.</span></h2><p>Your attempt to find <strong>{state.query}</strong> was saved. {state.message || 'No discovery provider is configured. No provider search was performed.'}</p><button type="button" className="presentation-inline-action" onClick={newSearch}>Start a new search <InterfaceIcon icon={ArrowRight} /></button></div>
         </section>}
 
         {state.kind === 'not-found' && <section className="discovery-state-card" aria-labelledby="discovery-not-found-heading">
-          <span className="discovery-state-symbol" aria-hidden="true"><SearchIcon /></span><div><p className="presentation-eyebrow">Keep exploring</p><h2 id="discovery-not-found-heading">No company found<span>.</span></h2><p>We couldn’t find <strong>{state.query}</strong> in the available data. Check the spelling, use the company’s full name, or try another company.</p><button className="presentation-inline-action" type="button" onClick={() => { inputRef.current?.focus(); inputRef.current?.select() }}>Refine your search <span aria-hidden="true">↗</span></button></div>
+          <span className="discovery-state-symbol" aria-hidden="true"><SearchIcon /></span><div><p className="presentation-eyebrow">Keep exploring</p><h2 id="discovery-not-found-heading">No company found<span>.</span></h2><p>We couldn’t find <strong>{state.query}</strong> in the available data. Check the spelling, use the company’s full name, or try another company.</p><button className="presentation-inline-action" type="button" onClick={() => { inputRef.current?.focus(); inputRef.current?.select() }}>Refine your search <InterfaceIcon icon={ArrowRight} /></button></div>
         </section>}
 
         {state.kind === 'pending' && <section className="discovery-state-card"><div><h2>Your search is still in progress.</h2><p>Open the saved search above to check its status. Your request has already been recorded.</p></div></section>}
         {state.kind === 'error' && <section className="discovery-state-card discovery-error" aria-labelledby="discovery-error-heading">
-          <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : state.message || 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <span aria-hidden="true">↗</span></button></div>
+          <span className="discovery-state-symbol" aria-hidden="true">!</span><div><p className="presentation-eyebrow">A pause in discovery</p><h2 id="discovery-error-heading">{state.timedOut ? 'This is taking too long.' : 'We couldn’t complete your search.'}</h2><p>{state.timedOut ? 'The search service did not respond in time.' : state.message || 'Something interrupted the search service.'} Your company name is still here. Please try again.</p><button className="button button--secondary" type="button" onClick={() => void runSearch(state.query)}>Try again <InterfaceIcon icon={ArrowRight} /></button></div>
         </section>}
         {state.kind === 'success' && <DiscoveryMatches key={savedId ?? state.query} matches={state.matches} total={state.total} matchMode={state.matchMode} onNewSearch={newSearch} searchId={savedId ?? undefined} loadDetails={service.getCompanyDetails} />}
       </div>
-      <footer className="discovery-closing"><span aria-hidden="true">↗</span><p>Meaningful introductions.<br /><strong>New possibilities.</strong></p><span>Let curiosity lead the way.</span></footer>
+      <footer className="discovery-closing"><InterfaceIcon icon={ArrowUpRight} /><p>Meaningful introductions.<br /><strong>New possibilities.</strong></p><span>Let curiosity lead the way.</span></footer>
     </main>
   )
 }

@@ -1,3 +1,5 @@
+import { ArrowLeft, ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AppFooter } from '../AppFooter'
@@ -35,9 +37,9 @@ export function AboutProjectPage({ user, logo, onLogout }: {
         { href: '/about', label: 'About This Project' },
       ]} /> : <header className="presentation-header about-public-header">
         <Link className="presentation-brand" to="/login">{logo}<span>Intro Finder</span></Link>
-        <Link className="about-login-link" to="/login">Login <span aria-hidden="true">↗</span></Link>
+        <Link className="about-login-link" to="/login">Login <InterfaceIcon icon={ArrowUpRight} /></Link>
       </header>}
-      <nav className="account-breadcrumb" aria-label="Breadcrumb"><Link to={user ? '/settings' : '/login'}><span aria-hidden="true">←</span> {user ? 'Back to settings' : 'Back to login'}</Link><span>Intro Finder / About</span></nav>
+      <nav className="account-breadcrumb" aria-label="Breadcrumb"><Link to={user ? '/settings' : '/login'}><InterfaceIcon icon={ArrowLeft} /> {user ? 'Back to settings' : 'Back to login'}</Link><span>Intro Finder / About</span></nav>
       <main className="account-main about-main" id="about-project" tabIndex={-1} ref={revealRef}>
         <header className="account-hero" data-reveal="hero">
           <p className="presentation-eyebrow"><span /> Learning through building</p>

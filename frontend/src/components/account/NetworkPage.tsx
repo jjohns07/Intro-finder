@@ -1,3 +1,5 @@
+import { ArrowRight, Download } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AccountPageLayout, type AccountPageProps } from './AccountPageLayout'
@@ -64,7 +66,7 @@ export function NetworkPage(props: AccountPageProps) {
       <section className="network-panel" aria-labelledby="network-import-heading">
         <h2 id="network-import-heading">Import a connection CSV</h2>
         <p>Up to 1,000 directed relationships and 1,500 contacts per file. Importing a new file replaces your current network and resets candidate identity confirmations.</p>
-        <a className="presentation-inline-action" download="intro-finder-connections.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(NETWORK_CSV_HEADER + '\n')}`}>Download empty CSV template ↗</a>
+        <a className="presentation-inline-action" download="intro-finder-connections.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(NETWORK_CSV_HEADER + '\n')}`}>Download empty CSV template <InterfaceIcon icon={Download} /></a>
         <details className="network-instructions"><summary>CSV structure and evidence rules</summary>
           <dl><div><dt>source_id / destination_id</dt><dd>Your own stable contact identifiers. Use <code>me</code> for yourself; Intro Finder uses your signed-in identity.</dd></div>
             <div><dt>source_name / destination_name</dt><dd>Required contact names. Leave the name and profile URL blank for <code>me</code>. Repeated contact IDs must have consistent details.</dd></div>
@@ -86,7 +88,7 @@ export function NetworkPage(props: AccountPageProps) {
         <label className="network-check"><input type="checkbox" checked={removeConfirmed} onChange={event => setRemoveConfirmed(event.target.checked)} disabled={busy} />Remove my imported network and identity confirmations.</label>
         <button className="button button--secondary" type="button" disabled={!removeConfirmed || busy} onClick={() => void remove()}>Delete imported network</button></section>}
       {busy && <p role="status">Processing network data…</p>}{error && <p className="network-error" role="alert">{error}</p>}{notice && <p className="network-notice" role="status">{notice}</p>}
-      <Link className="presentation-inline-action" to="/find-introductions">Find a company ↗</Link>
+      <Link className="presentation-inline-action" to="/find-introductions">Find a company <InterfaceIcon icon={ArrowRight} /></Link>
     </main>
   </AccountPageLayout>
 }

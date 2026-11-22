@@ -1,3 +1,5 @@
+import { ArrowUpRight } from 'lucide-react'
+import { InterfaceIcon } from '../InterfaceIcon'
 import { OpportunityPanel } from './OpportunityPanel'
 import type { IntroductionOpportunity } from './data'
 
@@ -21,7 +23,7 @@ export function ConnectionPathsSection({ opportunities = null, onExplore }: {
           <li><span>02</span><div><strong>Find the shared connection.</strong><p>A mutual contact can help you find common ground.</p></div></li>
           <li><span>03</span><div><strong>Make a meaningful introduction.</strong><p>Reach out with context and a clear reason to connect.</p></div></li>
         </ol>
-        <a href="#explore" className="presentation-inline-action">Explore a company <span aria-hidden="true">↗</span></a>
+        <a href="#explore" className="presentation-inline-action">Explore a company <InterfaceIcon icon={ArrowUpRight} /></a>
       </div>
       <figure className="presentation-path-figure">
         <div className="presentation-path-figure-header"><span className="presentation-eyebrow">How a warm path works</span><span className="presentation-illustration-label">Illustration</span></div>
